@@ -182,17 +182,63 @@ const handleDesignUpload = (e) => {
     dom.designAdjustTitle.style.display = 'flex';
     dom.designControls.style.display = 'flex';
     applyDesignTransform();
-    regenerate(); // Check if 3D button should be shown
+    regenerate(); 
   };
   img.src = url;
-  e.target.value = ''; // reset
+  e.target.value = ''; 
+};
+
+// ─── DRAG INTERACTION ──────────────────────────────────
+let isDragging = false;
+let startX, startY;
+
+const startDrag = (e) => {
+  if (!state.designImg) return;
+  if (e.target.closest('.zoom-controls') || e.target.closest('.preview-actions')) return;
+  isDragging = true;
+  startX = e.clientX || e.touches[0].clientX;
+  startY = e.clientY || e.touches[0].clientY;
+};
+
+const doDrag = (e) => {
+  if (!isDragging) return;
+  e.preventDefault();
+  const clientX = e.clientX || (e.touches ? e.touches[0].clientX : 0);
+  const clientY = e.clientY || (e.touches ? e.touches[0].clientY : 0);
+  
+  const moveX = clientX - startX;
+  const moveY = clientY - startY;
+  
+  // Calculate movement as percentage of container to match sliders
+  const rect = dom.svgWrap.getBoundingClientRect();
+  const percX = (moveX / rect.width) * 100;
+  const percY = (moveY / rect.height) * 100;
+  
+  // Apply considering zoom factor
+  state.dx += percX / state.zoom;
+  state.dy += percY / state.zoom;
+  
+  // Constrain slightly
+  state.dx = Math.max(-200, Math.min(200, state.dx));
+  state.dy = Math.max(-200, Math.min(200, state.dy));
+  
+  dom.slX.value = state.dx;
+  dom.slY.value = state.dy;
+  
+  applyDesignTransform();
+  
+  startX = clientX;
+  startY = clientY;
+};
+
+const stopDrag = () => {
+  isDragging = false;
 };
 
 // ─── 3D SLICING & PREVIEW ──────────────────────────────
 const open3DPreview = () => {
-  if (!state.svgData || !state.svgData.faces || !state.designImg) return;
+  if (!state.svgData || !state.svgData.faces) return;
   
-  // Show Modal
   dom.modal3d.style.display = 'flex';
   
   // Clean old viewer
@@ -215,6 +261,8 @@ const open3DPreview = () => {
   });
   
   // 1. Render flat composition to master Canvas
+  if (!state.designImg) return; // if no design, just show plain white box
+  
   const b = state.params.bleed;
   const pad = 10; // Must match the padding in dieline-engine wrapSVG
   
@@ -380,6 +428,11 @@ document.addEventListener('DOMContentLoaded', () => {
   // 3D Modal
   dom.btn3dPreview.addEventListener('click', open3DPreview);
   dom.btnCloseModal.addEventListener('click', () => { dom.modal3d.style.display = 'none'; });
+  
+  // Drag handling
+  dom.svgWrap.parentElement.addEventListener('mousedown', startDrag);
+  dom.svgWrap.parentElement.addEventListener('mousemove', doDrag);
+  window.addEventListener('mouseup', stopDrag);
   
   // Zoom wheel
   dom.svgWrap.parentElement.addEventListener('wheel', (e) => {

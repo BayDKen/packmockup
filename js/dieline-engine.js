@@ -21,12 +21,12 @@ const wrapSVG = (content, TW, TH, bleed) => {
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="${f(vbx)} ${f(vby)} ${f(vbw)} ${f(vbh)}" width="${f(vbw)}mm" height="${f(vbh)}mm">
 <defs>
 <style>
-.fill-panel { fill: #FFF8F0; }
-.fill-side { fill: #EDF4FF; }
-.fill-glue { fill: #FFF0F8; }
-.fill-tuck { fill: #F0FFF6; }
-.fill-dust { fill: #FDFFF0; }
-.fill-special { fill: #FFF5EE; }
+.fill-panel { fill: rgba(255,255,255,0.2); }
+.fill-side { fill: rgba(255,255,255,0.2); }
+.fill-glue { fill: rgba(255,255,255,0.2); }
+.fill-tuck { fill: rgba(255,255,255,0.2); }
+.fill-dust { fill: rgba(255,255,255,0.2); }
+.fill-special { fill: rgba(255,255,255,0.2); }
 .cut { fill: none; stroke: #CC0000; stroke-width: 0.3; stroke-linecap: round; stroke-linejoin: round; }
 .fold { fill: none; stroke: #0066CC; stroke-width: 0.25; stroke-dasharray: 4 2.5; stroke-linecap: butt; }
 .bleed { fill: none; stroke: #FF8888; stroke-width: 0.3; stroke-dasharray: 3 2; }
