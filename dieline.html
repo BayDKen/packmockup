@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dieline Maker — PackMockup</title>
+  <meta name="description" content="Free packaging dieline templates. Download SVG, PDF or PNG die-cut templates for boxes, bags and more." />
+  <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="css/dieline.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+</head>
+<body>
+
+<!-- ─── HEADER ─────────────────────────────────────────────── -->
+<header class="header">
+  <div class="logo">
+    <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+      <rect width="28" height="28" rx="7" fill="#731EFF"/>
+      <path d="M7 8h8c2.2 0 4 1.8 4 4s-1.8 4-4 4H7V8z" fill="white"/>
+      <path d="M7 16h10l3 4H7v-4z" fill="rgba(255,255,255,0.6)"/>
+    </svg>
+    Pack<span>Mockup</span>
+  </div>
+  <nav class="header-nav">
+    <a href="index.html">Mockups</a>
+    <a href="dieline.html" class="active">Dieline</a>
+    <a href="#">Tools</a>
+    <a href="#">About</a>
+  </nav>
+  <div class="header-right">
+    <span class="badge-free">100% Free</span>
+  </div>
+</header>
+
+<!-- ─── DIELINE LAYOUT ──────────────────────────────────────── -->
+<div class="dieline-layout">
+  
+  <!-- LEFT SIDEBAR: Templates & Settings -->
+  <aside class="dl-sidebar">
+    <div class="dl-section-title">Select Template</div>
+    <div class="template-grid" id="template-grid"></div>
+    
+    <div class="dl-divider"></div>
+    
+    <div class="dl-section-title">Dimensions</div>
+    <div class="dim-inputs" id="dim-inputs"></div>
+  </aside>
+  
+  <!-- CENTER: SVG Preview -->
+  <main class="dl-preview">
+    <div class="preview-badge">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+        <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+      </svg>
+      <span id="badge-tpl-name">Tuck End Box</span>
+    </div>
+    
+    <div id="dieline-svg-wrap"></div>
+    
+    <div class="zoom-controls">
+      <button class="zoom-btn" id="btn-zoom-out">−</button>
+      <div class="zoom-txt" id="zoom-txt">100%</div>
+      <button class="zoom-btn" id="btn-zoom-in">+</button>
+      <div style="width:1px;height:16px;background:var(--border);margin:0 4px;"></div>
+      <button class="zoom-btn" id="btn-zoom-fit" style="font-size:12px;width:auto;padding:0 8px;">Fit</button>
+    </div>
+  </main>
+  
+  <!-- RIGHT PANEL: Export & Info -->
+  <aside class="dl-panel">
+    <div class="dl-section-title">Sheet Info</div>
+    <div class="sheet-info-box">
+      <div class="sheet-dim" id="sheet-dim">0 × 0 mm</div>
+      <div class="sheet-sub">Total flat dimensions (including bleed)</div>
+    </div>
+    
+    <div class="dl-section-title">Legend</div>
+    <div class="dl-legend">
+      <div class="legend-item">
+        <div class="legend-line legend-cut"></div>
+        <span>Cut Line</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-line legend-fold"></div>
+        <span>Fold Line (Valley)</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-line legend-bleed"></div>
+        <span>Bleed Margin</span>
+      </div>
+    </div>
+    
+    <div class="dl-export">
+      <button class="dl-export-btn primary" id="btn-export-svg">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="7 10 12 15 17 10"/>
+          <line x1="12" y1="15" x2="12" y2="3"/>
+        </svg>
+        Download SVG Vector
+      </button>
+      
+      <button class="dl-export-btn secondary" id="btn-export-pdf">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+          <polyline points="6 9 6 2 18 2 18 9"></polyline>
+          <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+          <rect x="6" y="14" width="12" height="8"></rect>
+        </svg>
+        Print / Save PDF
+      </button>
+      
+      <button class="dl-export-btn secondary" id="btn-export-png">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+          <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+          <circle cx="8.5" cy="8.5" r="1.5"/>
+          <polyline points="21 15 16 10 5 21"/>
+        </svg>
+        Export PNG (3000px)
+      </button>
+    </div>
+    
+    <div class="export-note">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2.5">
+        <polyline points="20 6 9 17 4 12"></polyline>
+      </svg>
+      Free for commercial use
+    </div>
+  </aside>
+  
+</div>
+
+<!-- ─── TOAST ─────────────────────────────────────────────── -->
+<div class="toast" id="toast"></div>
+
+<!-- ─── SCRIPTS ───────────────────────────────────────────── -->
+<script src="js/dieline-engine.js"></script>
+<script src="js/dieline-app.js"></script>
+
+</body>
+</html>
