@@ -56,7 +56,25 @@
       <span id="badge-tpl-name">Tuck End Box</span>
     </div>
     
-    <div id="dieline-svg-wrap"></div>
+    <div class="preview-actions">
+      <label class="dl-action-btn primary" id="btn-upload-design">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="17 8 12 3 7 8"/>
+          <line x1="12" y1="3" x2="12" y2="15"/>
+        </svg>
+        Upload Design
+        <input type="file" id="inp-design-upload" accept="image/*" style="display:none" />
+      </label>
+      <button class="dl-action-btn special" id="btn-3d-preview" style="display:none">
+        ⬡ 3D Preview
+      </button>
+    </div>
+    
+    <div id="dieline-svg-wrap">
+      <img id="design-layer" src="" alt="" style="display:none; position:absolute; top:0; left:0; width:100%; height:100%; object-fit:contain; opacity:0.8; z-index:-1; pointer-events:none;" />
+      <div id="svg-container"></div>
+    </div>
     
     <div class="zoom-controls">
       <button class="zoom-btn" id="btn-zoom-out">−</button>
@@ -73,6 +91,22 @@
     <div class="sheet-info-box">
       <div class="sheet-dim" id="sheet-dim">0 × 0 mm</div>
       <div class="sheet-sub">Total flat dimensions (including bleed)</div>
+    </div>
+    
+    <div class="dl-section-title" id="design-adjust-title" style="display:none">Design Adjustments</div>
+    <div class="dim-inputs" id="design-controls" style="display:none; margin-bottom: 24px;">
+      <div class="dim-input-group">
+        <div class="dim-input-label">Scale (%)</div>
+        <input type="range" id="inp-dsg-scale" min="10" max="200" value="100" style="width:100%">
+      </div>
+      <div class="dim-input-group">
+        <div class="dim-input-label">Offset X</div>
+        <input type="range" id="inp-dsg-x" min="-50" max="50" value="0" style="width:100%">
+      </div>
+      <div class="dim-input-group">
+        <div class="dim-input-label">Offset Y</div>
+        <input type="range" id="inp-dsg-y" min="-50" max="50" value="0" style="width:100%">
+      </div>
     </div>
     
     <div class="dl-section-title">Legend</div>
@@ -130,10 +164,24 @@
   
 </div>
 
+<!-- ─── 3D PREVIEW MODAL ────────────────────────────────────── -->
+<div id="modal-3d" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.8); z-index:999; align-items:center; justify-content:center;">
+  <div style="background:var(--surface); border-radius:var(--radius-lg); padding:24px; position:relative; width:90vw; max-width:800px; height:80vh; display:flex; flex-direction:column;">
+    <button id="btn-close-modal" style="position:absolute; top:16px; right:16px; background:var(--bg); border:none; width:32px; height:32px; border-radius:50%; cursor:pointer; font-size:16px; font-weight:bold;">✕</button>
+    <h2 style="margin-bottom:16px;">3D Folded Preview</h2>
+    <div id="modal-3d-canvas" style="flex:1; background:var(--bg); border-radius:var(--radius-md); overflow:hidden; position:relative; cursor:grab;"></div>
+  </div>
+</div>
+
 <!-- ─── TOAST ─────────────────────────────────────────────── -->
 <div class="toast" id="toast"></div>
 
 <!-- ─── SCRIPTS ───────────────────────────────────────────── -->
+<!-- Three.js (needed for 3D preview) -->
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+<script src="js/viewer3d.js"></script>
 <script src="js/dieline-engine.js"></script>
 <script src="js/dieline-app.js"></script>
 

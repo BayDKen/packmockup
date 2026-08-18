@@ -214,6 +214,50 @@
   font-weight: 400;
 }
 
+.preview-actions {
+  position: absolute;
+  top: 24px;
+  right: 24px;
+  display: flex;
+  gap: 8px;
+  z-index: 10;
+}
+
+.dl-action-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  transition: all var(--transition);
+  border: none;
+}
+
+.dl-action-btn.primary {
+  background: var(--surface);
+  color: var(--primary);
+  border: 1.5px solid var(--primary);
+}
+
+.dl-action-btn.primary:hover {
+  background: var(--primary-alpha);
+}
+
+.dl-action-btn.special {
+  background: linear-gradient(135deg, #731EFF, #4a00cc);
+  color: white;
+  border: none;
+}
+
+.dl-action-btn.special:hover {
+  box-shadow: 0 4px 12px rgba(115,30,255,0.3);
+  transform: translateY(-1px);
+}
+
 /* Right Panel: Export & Info */
 .dl-panel {
   border-left: 1px solid var(--border);

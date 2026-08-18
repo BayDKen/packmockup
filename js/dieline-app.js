@@ -6,7 +6,16 @@ const state = {
   params: { W: 70, H: 100, D: 40, bleed: 3, thickness: 0.5 },
   unit: 'mm',
   zoom: 1.0,
-  svgData: null // stores current { svgString, TW, TH }
+  svgData: null,
+  
+  // Design overlay state
+  designImg: null,
+  dScale: 1.0,
+  dx: 0,
+  dy: 0,
+  
+  // 3D Viewer instance
+  viewer3d: null
 };
 
 const TEMPLATES = [
@@ -18,12 +27,8 @@ const TEMPLATES = [
   { id: 'paper-bag', name: 'Paper Bag', icon: '🛍', desc: 'Retail shopping bag', dims: ['W','H','D','bleed'] },
 ];
 
-const DIM_LABELS = {
-  W: 'Width (W)', H: 'Height (H)', D: 'Depth (D)', bleed: 'Bleed Margin'
-};
-const DIM_DEFAULTS = {
-  W: 70, H: 100, D: 40, bleed: 3
-};
+const DIM_LABELS = { W: 'Width (W)', H: 'Height (H)', D: 'Depth (D)', bleed: 'Bleed Margin' };
+const DIM_DEFAULTS = { W: 70, H: 100, D: 40, bleed: 3 };
 
 const $ = id => document.getElementById(id);
 let dom = {};
@@ -33,10 +38,28 @@ const initDom = () => {
     templateGrid: $('template-grid'),
     dimInputs: $('dim-inputs'),
     svgWrap: $('dieline-svg-wrap'),
+    svgContainer: $('svg-container'),
     sheetDim: $('sheet-dim'),
     toast: $('toast'),
     zoomTxt: $('zoom-txt'),
-    badgeName: $('badge-tpl-name')
+    badgeName: $('badge-tpl-name'),
+    
+    // Design upload
+    inpUpload: $('inp-design-upload'),
+    designLayer: $('design-layer'),
+    btn3dPreview: $('btn-3d-preview'),
+    designControls: $('design-controls'),
+    designAdjustTitle: $('design-adjust-title'),
+    
+    // Sliders
+    slScale: $('inp-dsg-scale'),
+    slX: $('inp-dsg-x'),
+    slY: $('inp-dsg-y'),
+    
+    // 3D Modal
+    modal3d: $('modal-3d'),
+    modal3dCanvas: $('modal-3d-canvas'),
+    btnCloseModal: $('btn-close-modal')
   };
 };
 
@@ -56,10 +79,12 @@ const selectTemplate = (id) => {
   const tpl = TEMPLATES.find(t => t.id === id);
   dom.badgeName.textContent = tpl.name;
   
-  // Update UI active state
   document.querySelectorAll('.template-btn').forEach((b, i) => {
     b.classList.toggle('active', TEMPLATES[i].id === id);
   });
+  
+  // Reset design when changing templates to keep it clean
+  resetDesign();
   
   buildDimInputs(tpl);
   regenerate();
@@ -69,9 +94,7 @@ const selectTemplate = (id) => {
 const buildDimInputs = (tpl) => {
   dom.dimInputs.innerHTML = '';
   tpl.dims.forEach(d => {
-    // Reset missing params to defaults
     if (!(d in state.params)) state.params[d] = DIM_DEFAULTS[d];
-    
     const div = document.createElement('div');
     div.className = 'dim-input-group';
     div.innerHTML = `
@@ -82,7 +105,6 @@ const buildDimInputs = (tpl) => {
       </div>
     `;
     dom.dimInputs.appendChild(div);
-    
     $(`inp-${d}`).addEventListener('input', (e) => {
       state.params[d] = parseFloat(e.target.value) || 0;
       regenerate();
@@ -93,8 +115,12 @@ const buildDimInputs = (tpl) => {
 const regenerate = () => {
   if (!window.PackDieline) return;
   state.svgData = window.PackDieline.generateDieline(state.templateId, state.params);
-  dom.svgWrap.innerHTML = state.svgData.svgString;
+  dom.svgContainer.innerHTML = state.svgData.svgString;
   updateSheetInfo();
+  
+  // Show 3D button only if the engine returned faces for 3D slicing
+  const hasFaces = state.svgData.faces && state.svgData.faces.length > 0;
+  dom.btn3dPreview.style.display = (hasFaces && state.designImg) ? 'flex' : 'none';
 };
 
 const updateSheetInfo = () => {
@@ -121,14 +147,142 @@ const fitToView = () => {
   const w = state.svgData.TW + state.params.bleed * 2;
   const h = state.svgData.TH + state.params.bleed * 2;
   
-  // Simple assumption: 1mm = 3.78px approximately on screen, but SVG is naturally responsive if we don't set px size.
-  // Actually, our SVG has width=...mm. Browsers render 1mm ~ 3.78px.
-  const svgPxW = w * 3.7795275591; 
-  const svgPxH = h * 3.7795275591;
-  
+  const svgPxW = w * 3.7795; 
+  const svgPxH = h * 3.7795;
   const scaleX = availableW / svgPxW;
   const scaleY = availableH / svgPxH;
   setZoom(Math.min(scaleX, scaleY, 1.0));
+};
+
+// ─── DESIGN OVERLAY ────────────────────────────────────
+const resetDesign = () => {
+  state.designImg = null;
+  dom.designLayer.style.display = 'none';
+  dom.designLayer.src = '';
+  dom.designAdjustTitle.style.display = 'none';
+  dom.designControls.style.display = 'none';
+  dom.btn3dPreview.style.display = 'none';
+  state.dScale = 1.0; state.dx = 0; state.dy = 0;
+  dom.slScale.value = 100; dom.slX.value = 0; dom.slY.value = 0;
+};
+
+const applyDesignTransform = () => {
+  dom.designLayer.style.transform = `translate(${state.dx}%, ${state.dy}%) scale(${state.dScale})`;
+};
+
+const handleDesignUpload = (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const url = URL.createObjectURL(file);
+  const img = new Image();
+  img.onload = () => {
+    state.designImg = img;
+    dom.designLayer.src = url;
+    dom.designLayer.style.display = 'block';
+    dom.designAdjustTitle.style.display = 'flex';
+    dom.designControls.style.display = 'flex';
+    applyDesignTransform();
+    regenerate(); // Check if 3D button should be shown
+  };
+  img.src = url;
+  e.target.value = ''; // reset
+};
+
+// ─── 3D SLICING & PREVIEW ──────────────────────────────
+const open3DPreview = () => {
+  if (!state.svgData || !state.svgData.faces || !state.designImg) return;
+  
+  // Show Modal
+  dom.modal3d.style.display = 'flex';
+  
+  // Clean old viewer
+  if (state.viewer3d) {
+    state.viewer3d.dispose();
+    state.viewer3d = null;
+  }
+  
+  // Initialize new viewer
+  // Convert dimensions to meters approx for ThreeJS (assuming W,H,D in mm, divide by 30 for nice viewing scale)
+  const W = state.params.W / 30;
+  const H = state.params.H / 30;
+  const D = state.params.D / 30;
+  
+  state.viewer3d = new Viewer3D(dom.modal3dCanvas, {
+    color: '#ffffff',
+    dims: { w: W, h: H, d: D }
+  });
+  
+  // 1. Render flat composition to master Canvas
+  const b = state.params.bleed;
+  const CW = state.svgData.TW + b*2;
+  const CH = state.svgData.TH + b*2;
+  
+  // Use high resolution for extraction
+  const masterRes = 4000;
+  const scaleRes = masterRes / Math.max(CW, CH);
+  
+  const mCanvas = document.createElement('canvas');
+  mCanvas.width = CW * scaleRes;
+  mCanvas.height = CH * scaleRes;
+  const ctx = mCanvas.getContext('2d');
+  
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, mCanvas.width, mCanvas.height);
+  
+  // Calculate image draw rect taking user transform into account
+  // Default: object-fit: contain
+  const iAspect = state.designImg.width / state.designImg.height;
+  const cAspect = mCanvas.width / mCanvas.height;
+  
+  let drawW, drawH, drawX, drawY;
+  if (iAspect > cAspect) {
+    drawW = mCanvas.width;
+    drawH = mCanvas.width / iAspect;
+  } else {
+    drawH = mCanvas.height;
+    drawW = mCanvas.height * iAspect;
+  }
+  
+  drawX = (mCanvas.width - drawW) / 2;
+  drawY = (mCanvas.height - drawH) / 2;
+  
+  // Apply transformations
+  const cx = mCanvas.width / 2;
+  const cy = mCanvas.height / 2;
+  ctx.translate(cx, cy);
+  // User offsets are in percentages of the container
+  ctx.translate(state.dx/100 * mCanvas.width, state.dy/100 * mCanvas.height);
+  ctx.scale(state.dScale, state.dScale);
+  ctx.translate(-cx, -cy);
+  
+  ctx.drawImage(state.designImg, drawX, drawY, drawW, drawH);
+  
+  // 2. Slice faces and feed to 3D Viewer
+  state.svgData.faces.forEach(faceData => {
+    // Face coordinates are in local SVG space. We need to offset by bleed to get mCanvas space
+    const fx = (faceData.x + b) * scaleRes;
+    const fy = (faceData.y + b) * scaleRes;
+    const fw = faceData.w * scaleRes;
+    const fh = faceData.h * scaleRes;
+    
+    if (fw <= 0 || fh <= 0) return;
+    
+    const faceCanvas = document.createElement('canvas');
+    faceCanvas.width = fw;
+    faceCanvas.height = fh;
+    const fCtx = faceCanvas.getContext('2d');
+    
+    if (faceData.rot === 180) {
+      fCtx.translate(fw/2, fh/2);
+      fCtx.rotate(Math.PI);
+      fCtx.translate(-fw/2, -fh/2);
+    }
+    
+    fCtx.drawImage(mCanvas, fx, fy, fw, fh, 0, 0, fw, fh);
+    
+    // Set to 3D viewer (faces mapping: 0=Right, 1=Left, 2=Top, 3=Bottom, 4=Front, 5=Back)
+    state.viewer3d.setFaceImage(faceData.face, faceCanvas);
+  });
 };
 
 // ─── EXPORT ────────────────────────────────────────────
@@ -164,8 +318,14 @@ const exportPNG = (res = 3000) => {
     cv.width = res;
     cv.height = Math.round(res / aspect);
     const ctx = cv.getContext('2d');
+    
+    // Draw white background
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, cv.width, cv.height);
+    
+    // If user has a design layer, draw it first (simplification: we skip user design on PNG export to keep dieline clean, 
+    // or we can draw it. Let's just export pure dieline for the PNG export feature)
+    
     ctx.drawImage(img, 0, 0, cv.width, cv.height);
     const link = document.createElement('a');
     link.download = `dieline-${state.templateId}-${res}px.png`;
@@ -195,7 +355,7 @@ const exportPDF = () => {
 document.addEventListener('DOMContentLoaded', () => {
   initDom();
   initTemplateGrid();
-  selectTemplate('tuck-box'); // Auto triggers buildInputs, regenerate, fitToView
+  selectTemplate('tuck-box'); 
   
   $('btn-zoom-in').onclick = () => setZoom(state.zoom + 0.1);
   $('btn-zoom-out').onclick = () => setZoom(state.zoom - 0.1);
@@ -205,7 +365,19 @@ document.addEventListener('DOMContentLoaded', () => {
   $('btn-export-png').onclick = () => exportPNG(3000);
   $('btn-export-pdf').onclick = exportPDF;
   
-  // Handle mouse wheel zoom
+  // Design upload
+  dom.inpUpload.addEventListener('change', handleDesignUpload);
+  
+  // Design sliders
+  dom.slScale.addEventListener('input', (e) => { state.dScale = e.target.value / 100; applyDesignTransform(); });
+  dom.slX.addEventListener('input', (e) => { state.dx = e.target.value; applyDesignTransform(); });
+  dom.slY.addEventListener('input', (e) => { state.dy = e.target.value; applyDesignTransform(); });
+  
+  // 3D Modal
+  dom.btn3dPreview.addEventListener('click', open3DPreview);
+  dom.btnCloseModal.addEventListener('click', () => { dom.modal3d.style.display = 'none'; });
+  
+  // Zoom wheel
   dom.svgWrap.parentElement.addEventListener('wheel', (e) => {
     if (e.ctrlKey || e.metaKey) {
       e.preventDefault();
