@@ -201,8 +201,10 @@ const open3DPreview = () => {
     state.viewer3d = null;
   }
   
+  // Force browser layout calculation so Viewer3D gets correct width/height
+  dom.modal3dCanvas.offsetHeight; 
+  
   // Initialize new viewer
-  // Convert dimensions to meters approx for ThreeJS (assuming W,H,D in mm, divide by 30 for nice viewing scale)
   const W = state.params.W / 30;
   const H = state.params.H / 30;
   const D = state.params.D / 30;
@@ -214,8 +216,11 @@ const open3DPreview = () => {
   
   // 1. Render flat composition to master Canvas
   const b = state.params.bleed;
-  const CW = state.svgData.TW + b*2;
-  const CH = state.svgData.TH + b*2;
+  const pad = 10; // Must match the padding in dieline-engine wrapSVG
+  
+  // The visual viewBox dimensions of the SVG
+  const CW = state.svgData.TW + (b + pad) * 2;
+  const CH = state.svgData.TH + (b + pad) * 2;
   
   // Use high resolution for extraction
   const masterRes = 4000;
@@ -229,8 +234,6 @@ const open3DPreview = () => {
   ctx.fillStyle = '#ffffff';
   ctx.fillRect(0, 0, mCanvas.width, mCanvas.height);
   
-  // Calculate image draw rect taking user transform into account
-  // Default: object-fit: contain
   const iAspect = state.designImg.width / state.designImg.height;
   const cAspect = mCanvas.width / mCanvas.height;
   
@@ -250,7 +253,6 @@ const open3DPreview = () => {
   const cx = mCanvas.width / 2;
   const cy = mCanvas.height / 2;
   ctx.translate(cx, cy);
-  // User offsets are in percentages of the container
   ctx.translate(state.dx/100 * mCanvas.width, state.dy/100 * mCanvas.height);
   ctx.scale(state.dScale, state.dScale);
   ctx.translate(-cx, -cy);
@@ -259,9 +261,9 @@ const open3DPreview = () => {
   
   // 2. Slice faces and feed to 3D Viewer
   state.svgData.faces.forEach(faceData => {
-    // Face coordinates are in local SVG space. We need to offset by bleed to get mCanvas space
-    const fx = (faceData.x + b) * scaleRes;
-    const fy = (faceData.y + b) * scaleRes;
+    // Offset by bleed + pad to map local SVG space back to our canvas bounding box
+    const fx = (faceData.x + b + pad) * scaleRes;
+    const fy = (faceData.y + b + pad) * scaleRes;
     const fw = faceData.w * scaleRes;
     const fh = faceData.h * scaleRes;
     
@@ -280,9 +282,11 @@ const open3DPreview = () => {
     
     fCtx.drawImage(mCanvas, fx, fy, fw, fh, 0, 0, fw, fh);
     
-    // Set to 3D viewer (faces mapping: 0=Right, 1=Left, 2=Top, 3=Bottom, 4=Front, 5=Back)
     state.viewer3d.setFaceImage(faceData.face, faceCanvas);
   });
+  
+  // Trigger a resize just in case
+  setTimeout(() => { if (state.viewer3d) state.viewer3d._onResize(); }, 100);
 };
 
 // ─── EXPORT ────────────────────────────────────────────
