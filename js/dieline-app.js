@@ -14,8 +14,12 @@ const state = {
   dx: 0,
   dy: 0,
   
-  // 3D Viewer instance
-  viewer3d: null
+  // 3D Viewers
+  viewer3d: null,     // Modal full 3D viewer
+  miniViewer: null,   // Live mini 3D viewer
+  
+  // Throttle state for live 3D updates
+  texUpdatePending: false
 };
 
 const TEMPLATES = [
@@ -56,7 +60,8 @@ const initDom = () => {
     slX: $('inp-dsg-x'),
     slY: $('inp-dsg-y'),
     
-    // 3D Modal
+    // 3D Canvas elements
+    mini3dCanvas: $('mini-3d-canvas'),
     modal3d: $('modal-3d'),
     modal3dCanvas: $('modal-3d-canvas'),
     btnCloseModal: $('btn-close-modal')
@@ -83,9 +88,7 @@ const selectTemplate = (id) => {
     b.classList.toggle('active', TEMPLATES[i].id === id);
   });
   
-  // Reset design when changing templates to keep it clean
   resetDesign();
-  
   buildDimInputs(tpl);
   regenerate();
   setTimeout(fitToView, 50);
@@ -112,15 +115,20 @@ const buildDimInputs = (tpl) => {
   });
 };
 
+// SVG Generation
+let rebuildTimeout;
 const regenerate = () => {
   if (!window.PackDieline) return;
   state.svgData = window.PackDieline.generateDieline(state.templateId, state.params);
   dom.svgContainer.innerHTML = state.svgData.svgString;
   updateSheetInfo();
   
-  // Show 3D button only if the engine returned faces for 3D slicing
-  const hasFaces = state.svgData.faces && state.svgData.faces.length > 0;
-  dom.btn3dPreview.style.display = (hasFaces && state.designImg) ? 'flex' : 'none';
+  // Debounce rebuilding the WebGL viewer to avoid crashing browser when sliding inputs fast
+  clearTimeout(rebuildTimeout);
+  rebuildTimeout = setTimeout(() => {
+    const hasFaces = state.svgData.faces && state.svgData.faces.length > 0;
+    if (hasFaces) rebuildMiniViewer();
+  }, 250);
 };
 
 const updateSheetInfo = () => {
@@ -161,13 +169,14 @@ const resetDesign = () => {
   dom.designLayer.src = '';
   dom.designAdjustTitle.style.display = 'none';
   dom.designControls.style.display = 'none';
-  dom.btn3dPreview.style.display = 'none';
   state.dScale = 1.0; state.dx = 0; state.dy = 0;
   dom.slScale.value = 100; dom.slX.value = 0; dom.slY.value = 0;
 };
 
 const applyDesignTransform = () => {
   dom.designLayer.style.transform = `translate(${state.dx}%, ${state.dy}%) scale(${state.dScale})`;
+  // Trigger 3D Texture Update smoothly
+  requestTextureUpdate();
 };
 
 const handleDesignUpload = (e) => {
@@ -182,7 +191,6 @@ const handleDesignUpload = (e) => {
     dom.designAdjustTitle.style.display = 'flex';
     dom.designControls.style.display = 'flex';
     applyDesignTransform();
-    regenerate(); 
   };
   img.src = url;
   e.target.value = ''; 
@@ -209,16 +217,13 @@ const doDrag = (e) => {
   const moveX = clientX - startX;
   const moveY = clientY - startY;
   
-  // Calculate movement as percentage of container to match sliders
   const rect = dom.svgWrap.getBoundingClientRect();
   const percX = (moveX / rect.width) * 100;
   const percY = (moveY / rect.height) * 100;
   
-  // Apply considering zoom factor
   state.dx += percX / state.zoom;
   state.dy += percY / state.zoom;
   
-  // Constrain slightly
   state.dx = Math.max(-200, Math.min(200, state.dx));
   state.dy = Math.max(-200, Math.min(200, state.dy));
   
@@ -235,43 +240,50 @@ const stopDrag = () => {
   isDragging = false;
 };
 
+
 // ─── 3D SLICING & PREVIEW ──────────────────────────────
-const open3DPreview = () => {
-  if (!state.svgData || !state.svgData.faces) return;
+
+// Setup or Re-setup the Mini Viewer (called when dimensions change)
+const rebuildMiniViewer = () => {
+  if (state.miniViewer) state.miniViewer.dispose();
   
-  dom.modal3d.style.display = 'flex';
-  
-  // Clean old viewer
-  if (state.viewer3d) {
-    state.viewer3d.dispose();
-    state.viewer3d = null;
-  }
-  
-  // Force browser layout calculation so Viewer3D gets correct width/height
-  dom.modal3dCanvas.offsetHeight; 
-  
-  // Initialize new viewer
   const W = state.params.W / 30;
   const H = state.params.H / 30;
   const D = state.params.D / 30;
   
-  state.viewer3d = new Viewer3D(dom.modal3dCanvas, {
+  // Use off-white color to simulate cardboard inside
+  state.miniViewer = new Viewer3D(dom.mini3dCanvas, {
     color: '#ffffff',
     dims: { w: W, h: H, d: D }
   });
   
-  // 1. Render flat composition to master Canvas
-  if (!state.designImg) return; // if no design, just show plain white box
-  
+  // Delay slightly to ensure canvas is attached and dimensioned
+  setTimeout(() => {
+    state.miniViewer._onResize();
+    applyTexturesToViewer(state.miniViewer, 1000); // 1000px resolution is enough for mini preview
+  }, 50);
+};
+
+// Throttle wrapper to maintain 60fps while dragging
+const requestTextureUpdate = () => {
+  if (state.texUpdatePending) return;
+  state.texUpdatePending = true;
+  requestAnimationFrame(() => {
+    if (state.miniViewer) applyTexturesToViewer(state.miniViewer, 1000);
+    if (state.viewer3d && dom.modal3d.style.display === 'flex') applyTexturesToViewer(state.viewer3d, 3000);
+    state.texUpdatePending = false;
+  });
+};
+
+// The Core Slicing Engine
+const applyTexturesToViewer = (viewer, masterRes = 2000) => {
+  if (!state.svgData || !state.svgData.faces) return;
+
   const b = state.params.bleed;
-  const pad = 10; // Must match the padding in dieline-engine wrapSVG
-  
-  // The visual viewBox dimensions of the SVG
+  const pad = 10; 
   const CW = state.svgData.TW + (b + pad) * 2;
   const CH = state.svgData.TH + (b + pad) * 2;
   
-  // Use high resolution for extraction
-  const masterRes = 4000;
   const scaleRes = masterRes / Math.max(CW, CH);
   
   const mCanvas = document.createElement('canvas');
@@ -282,34 +294,33 @@ const open3DPreview = () => {
   ctx.fillStyle = '#ffffff';
   ctx.fillRect(0, 0, mCanvas.width, mCanvas.height);
   
-  const iAspect = state.designImg.width / state.designImg.height;
-  const cAspect = mCanvas.width / mCanvas.height;
-  
-  let drawW, drawH, drawX, drawY;
-  if (iAspect > cAspect) {
-    drawW = mCanvas.width;
-    drawH = mCanvas.width / iAspect;
-  } else {
-    drawH = mCanvas.height;
-    drawW = mCanvas.height * iAspect;
+  if (state.designImg) {
+    const iAspect = state.designImg.width / state.designImg.height;
+    const cAspect = mCanvas.width / mCanvas.height;
+    
+    let drawW, drawH, drawX, drawY;
+    if (iAspect > cAspect) {
+      drawW = mCanvas.width;
+      drawH = mCanvas.width / iAspect;
+    } else {
+      drawH = mCanvas.height;
+      drawW = mCanvas.height * iAspect;
+    }
+    
+    drawX = (mCanvas.width - drawW) / 2;
+    drawY = (mCanvas.height - drawH) / 2;
+    
+    const cx = mCanvas.width / 2;
+    const cy = mCanvas.height / 2;
+    ctx.translate(cx, cy);
+    ctx.translate(state.dx/100 * mCanvas.width, state.dy/100 * mCanvas.height);
+    ctx.scale(state.dScale, state.dScale);
+    ctx.translate(-cx, -cy);
+    
+    ctx.drawImage(state.designImg, drawX, drawY, drawW, drawH);
   }
   
-  drawX = (mCanvas.width - drawW) / 2;
-  drawY = (mCanvas.height - drawH) / 2;
-  
-  // Apply transformations
-  const cx = mCanvas.width / 2;
-  const cy = mCanvas.height / 2;
-  ctx.translate(cx, cy);
-  ctx.translate(state.dx/100 * mCanvas.width, state.dy/100 * mCanvas.height);
-  ctx.scale(state.dScale, state.dScale);
-  ctx.translate(-cx, -cy);
-  
-  ctx.drawImage(state.designImg, drawX, drawY, drawW, drawH);
-  
-  // 2. Slice faces and feed to 3D Viewer
   state.svgData.faces.forEach(faceData => {
-    // Offset by bleed + pad to map local SVG space back to our canvas bounding box
     const fx = (faceData.x + b + pad) * scaleRes;
     const fy = (faceData.y + b + pad) * scaleRes;
     const fw = faceData.w * scaleRes;
@@ -329,11 +340,28 @@ const open3DPreview = () => {
     }
     
     fCtx.drawImage(mCanvas, fx, fy, fw, fh, 0, 0, fw, fh);
-    
-    state.viewer3d.setFaceImage(faceData.face, faceCanvas);
+    viewer.setFaceImage(faceData.face, faceCanvas);
+  });
+};
+
+// Modal preview
+const open3DPreview = () => {
+  if (!state.svgData || !state.svgData.faces) return;
+  dom.modal3d.style.display = 'flex';
+  dom.modal3dCanvas.offsetHeight; // force layout
+  
+  if (state.viewer3d) state.viewer3d.dispose();
+  
+  const W = state.params.W / 30;
+  const H = state.params.H / 30;
+  const D = state.params.D / 30;
+  
+  state.viewer3d = new Viewer3D(dom.modal3dCanvas, {
+    color: '#ffffff',
+    dims: { w: W, h: H, d: D }
   });
   
-  // Trigger a resize just in case
+  applyTexturesToViewer(state.viewer3d, 4000);
   setTimeout(() => { if (state.viewer3d) state.viewer3d._onResize(); }, 100);
 };
 
@@ -371,13 +399,8 @@ const exportPNG = (res = 3000) => {
     cv.height = Math.round(res / aspect);
     const ctx = cv.getContext('2d');
     
-    // Draw white background
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, cv.width, cv.height);
-    
-    // If user has a design layer, draw it first (simplification: we skip user design on PNG export to keep dieline clean, 
-    // or we can draw it. Let's just export pure dieline for the PNG export feature)
-    
     ctx.drawImage(img, 0, 0, cv.width, cv.height);
     const link = document.createElement('a');
     link.download = `dieline-${state.templateId}-${res}px.png`;
@@ -417,24 +440,19 @@ document.addEventListener('DOMContentLoaded', () => {
   $('btn-export-png').onclick = () => exportPNG(3000);
   $('btn-export-pdf').onclick = exportPDF;
   
-  // Design upload
   dom.inpUpload.addEventListener('change', handleDesignUpload);
   
-  // Design sliders
   dom.slScale.addEventListener('input', (e) => { state.dScale = e.target.value / 100; applyDesignTransform(); });
-  dom.slX.addEventListener('input', (e) => { state.dx = e.target.value; applyDesignTransform(); });
-  dom.slY.addEventListener('input', (e) => { state.dy = e.target.value; applyDesignTransform(); });
+  dom.slX.addEventListener('input', (e) => { state.dx = parseFloat(e.target.value); applyDesignTransform(); });
+  dom.slY.addEventListener('input', (e) => { state.dy = parseFloat(e.target.value); applyDesignTransform(); });
   
-  // 3D Modal
   dom.btn3dPreview.addEventListener('click', open3DPreview);
   dom.btnCloseModal.addEventListener('click', () => { dom.modal3d.style.display = 'none'; });
   
-  // Drag handling
   dom.svgWrap.parentElement.addEventListener('mousedown', startDrag);
   dom.svgWrap.parentElement.addEventListener('mousemove', doDrag);
   window.addEventListener('mouseup', stopDrag);
   
-  // Zoom wheel
   dom.svgWrap.parentElement.addEventListener('wheel', (e) => {
     if (e.ctrlKey || e.metaKey) {
       e.preventDefault();
