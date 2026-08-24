@@ -135,13 +135,46 @@ class Viewer3D {
 
   _makeMat(faceIdx) {
     const img = this._faceImages[faceIdx];
+    
+    // Create material with procedural paper-like bumps
     const mat = new THREE.MeshStandardMaterial({
       color: img ? 0xffffff : new THREE.Color(this.baseColor),
-      roughness: 0.28,
-      metalness: 0.05,
+      roughness: 0.85,  // Paper is rough, not shiny
+      metalness: 0.0,   // Paper is not metallic
+      bumpMap: this._getPaperBumpMap(),
+      bumpScale: 0.002  // Subtle fiber bumps
     });
+    
     if (img) mat.map = this._makeTexture(img);
     return mat;
+  }
+
+  // Generate procedural noise canvas for paper texture
+  _getPaperBumpMap() {
+    if (Viewer3D._bumpMap) return Viewer3D._bumpMap; // Cache it
+    
+    const size = 512;
+    const cv = document.createElement('canvas');
+    cv.width = cv.height = size;
+    const ctx = cv.getContext('2d');
+    const imgData = ctx.createImageData(size, size);
+    
+    for(let i = 0; i < imgData.data.length; i += 4) {
+      // Create high-frequency noise for paper fibers
+      const noise = (Math.random() * 255 + Math.random() * 255) / 2;
+      imgData.data[i] = noise;
+      imgData.data[i+1] = noise;
+      imgData.data[i+2] = noise;
+      imgData.data[i+3] = 255;
+    }
+    
+    ctx.putImageData(imgData, 0, 0);
+    const tex = new THREE.CanvasTexture(cv);
+    tex.wrapS = THREE.RepeatWrapping;
+    tex.wrapT = THREE.RepeatWrapping;
+    
+    Viewer3D._bumpMap = tex;
+    return tex;
   }
 
   _makeTexture(imgEl) {
