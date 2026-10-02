@@ -14,21 +14,23 @@ const state = {
   dx: 0,
   dy: 0,
   
-  // 3D Viewers
+  // 3D Viewers & Material
   viewer3d: null,     // Modal full 3D viewer
   miniViewer: null,   // Live mini 3D viewer
+  finish: 'matte',
+  foldProgress: 1.0,
   
   // Throttle state for live 3D updates
   texUpdatePending: false
 };
 
 const TEMPLATES = [
-  { id: 'tuck-box', name: 'Tuck End Box', icon: '📦', desc: 'Classic folding box', dims: ['W','H','D','bleed'] },
-  { id: 'mailer-box', name: 'Mailer Box', icon: '📮', desc: 'Shipping & e-commerce', dims: ['W','H','D','bleed'] },
-  { id: 'sleeve-box', name: 'Sleeve Box', icon: '🗂', desc: 'Open-end sleeve wrap', dims: ['W','H','D','bleed'] },
-  { id: 'pillow-box', name: 'Pillow Box', icon: '🎁', desc: 'Curved gift packaging', dims: ['W','H','bleed'] },
-  { id: 'pyramid-box', name: 'Pyramid Box', icon: '🔺', desc: '4-sided pyramid box', dims: ['W','H','bleed'] },
-  { id: 'paper-bag', name: 'Paper Bag', icon: '🛍', desc: 'Retail shopping bag', dims: ['W','H','D','bleed'] },
+  { id: 'tuck-box',    name: 'Tuck End Box', icon: '📦', desc: 'Classic folding box', dims: ['W','H','D','bleed'] },
+  { id: 'mailer-box',  name: 'Mailer Box',   icon: '📮', desc: 'Shipping & e-commerce', dims: ['W','H','D','bleed'] },
+  { id: 'sleeve-box',  name: 'Sleeve Box',   icon: '🗂', desc: 'Open-end sleeve wrap', dims: ['W','H','D','bleed'] },
+  { id: 'pillow-box',  name: 'Pillow Box',   icon: '🎁', desc: 'Curved gift packaging', dims: ['W','H','bleed'] },
+  { id: 'pyramid-box', name: 'Pyramid Box',  icon: '🔺', desc: '4-sided pyramid box', dims: ['W','H','bleed'] },
+  { id: 'paper-bag',   name: 'Paper Bag',    icon: '🛍', desc: 'Retail shopping bag', dims: ['W','H','D','bleed'] },
 ];
 
 const DIM_LABELS = { W: 'Width (W)', H: 'Height (H)', D: 'Depth (D)', bleed: 'Bleed Margin' };
@@ -62,9 +64,20 @@ const initDom = () => {
     
     // 3D Canvas elements
     mini3dCanvas: $('mini-3d-canvas'),
+    inpFold: $('inp-fold'),
+    txtFoldVal: $('txt-fold-val'),
+    btnAnimFold: $('btn-anim-fold'),
+    dlFinishGrid: $('dl-finish-grid'),
+    btnExportGlb: $('btn-export-glb'),
+    
+    // Modal
     modal3d: $('modal-3d'),
     modal3dCanvas: $('modal-3d-canvas'),
-    btnCloseModal: $('btn-close-modal')
+    btnCloseModal: $('btn-close-modal'),
+    modalInpFold: $('modal-inp-fold'),
+    modalFoldVal: $('modal-fold-val'),
+    modalBtnExportGlb: $('modal-btn-export-glb'),
+    modalBtnExportPng: $('modal-btn-export-png')
   };
 };
 
@@ -123,12 +136,10 @@ const regenerate = () => {
   dom.svgContainer.innerHTML = state.svgData.svgString;
   updateSheetInfo();
   
-  // Debounce rebuilding the WebGL viewer to avoid crashing browser when sliding inputs fast
   clearTimeout(rebuildTimeout);
   rebuildTimeout = setTimeout(() => {
-    const hasFaces = state.svgData.faces && state.svgData.faces.length > 0;
-    if (hasFaces) rebuildMiniViewer();
-  }, 250);
+    rebuildMiniViewer();
+  }, 200);
 };
 
 const updateSheetInfo = () => {
@@ -175,7 +186,6 @@ const resetDesign = () => {
 
 const applyDesignTransform = () => {
   dom.designLayer.style.transform = `translate(${state.dx}%, ${state.dy}%) scale(${state.dScale})`;
-  // Trigger 3D Texture Update smoothly
   requestTextureUpdate();
 };
 
@@ -240,46 +250,43 @@ const stopDrag = () => {
   isDragging = false;
 };
 
-
 // ─── 3D SLICING & PREVIEW ──────────────────────────────
 
-// Setup or Re-setup the Mini Viewer (called when dimensions change)
 const rebuildMiniViewer = () => {
   if (state.miniViewer) state.miniViewer.dispose();
   
-  const W = state.params.W / 30;
-  const H = state.params.H / 30;
-  const D = state.params.D / 30;
+  const W = (state.params.W || 70) / 30;
+  const H = (state.params.H || 100) / 30;
+  const D = (state.params.D || 40) / 30;
   
-  // Use off-white color to simulate cardboard inside
   state.miniViewer = new Viewer3D(dom.mini3dCanvas, {
+    modelType: state.templateId,
     color: '#ffffff',
-    dims: { w: W, h: H, d: D }
+    finish: state.finish,
+    foldProgress: state.foldProgress,
+    dims: { w: W, h: H, d: D, baseW: W, height: H, radius: W / 2 }
   });
   
-  // Delay slightly to ensure canvas is attached and dimensioned
   setTimeout(() => {
     state.miniViewer._onResize();
-    applyTexturesToViewer(state.miniViewer, 1000); // 1000px resolution is enough for mini preview
+    applyTexturesToViewer(state.miniViewer, 1024);
   }, 50);
 };
 
-// Throttle wrapper to maintain 60fps while dragging
 const requestTextureUpdate = () => {
   if (state.texUpdatePending) return;
   state.texUpdatePending = true;
   requestAnimationFrame(() => {
-    if (state.miniViewer) applyTexturesToViewer(state.miniViewer, 1000);
+    if (state.miniViewer) applyTexturesToViewer(state.miniViewer, 1024);
     if (state.viewer3d && dom.modal3d.style.display === 'flex') applyTexturesToViewer(state.viewer3d, 3000);
     state.texUpdatePending = false;
   });
 };
 
-// The Core Slicing Engine
 const applyTexturesToViewer = (viewer, masterRes = 2000) => {
   if (!state.svgData || !state.svgData.faces) return;
 
-  const b = state.params.bleed;
+  const b = state.params.bleed || 3;
   const pad = 10; 
   const CW = state.svgData.TW + (b + pad) * 2;
   const CH = state.svgData.TH + (b + pad) * 2;
@@ -344,25 +351,26 @@ const applyTexturesToViewer = (viewer, masterRes = 2000) => {
   });
 };
 
-// Modal preview
 const open3DPreview = () => {
-  if (!state.svgData || !state.svgData.faces) return;
   dom.modal3d.style.display = 'flex';
-  dom.modal3dCanvas.offsetHeight; // force layout
+  dom.modal3dCanvas.offsetHeight;
   
   if (state.viewer3d) state.viewer3d.dispose();
   
-  const W = state.params.W / 30;
-  const H = state.params.H / 30;
-  const D = state.params.D / 30;
+  const W = (state.params.W || 70) / 30;
+  const H = (state.params.H || 100) / 30;
+  const D = (state.params.D || 40) / 30;
   
   state.viewer3d = new Viewer3D(dom.modal3dCanvas, {
+    modelType: state.templateId,
     color: '#ffffff',
-    dims: { w: W, h: H, d: D }
+    finish: state.finish,
+    foldProgress: state.foldProgress,
+    dims: { w: W, h: H, d: D, baseW: W, height: H, radius: W / 2 }
   });
   
-  applyTexturesToViewer(state.viewer3d, 4000);
-  setTimeout(() => { if (state.viewer3d) state.viewer3d._onResize(); }, 100);
+  applyTexturesToViewer(state.viewer3d, 3500);
+  setTimeout(() => { if (state.viewer3d) state.viewer3d._onResize(); }, 80);
 };
 
 // ─── EXPORT ────────────────────────────────────────────
@@ -426,6 +434,14 @@ const exportPDF = () => {
   printWindow.document.close();
 };
 
+const exportGLB = () => {
+  const viewer = state.viewer3d || state.miniViewer;
+  if (viewer) {
+    viewer.exportGLTF(`dieline-model-${state.templateId}.glb`);
+    showToast('✓ 3D GLB Model exported successfully');
+  }
+};
+
 // ─── INIT ──────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
   initDom();
@@ -439,7 +455,61 @@ document.addEventListener('DOMContentLoaded', () => {
   $('btn-export-svg').onclick = exportSVG;
   $('btn-export-png').onclick = () => exportPNG(3000);
   $('btn-export-pdf').onclick = exportPDF;
+  dom.btnExportGlb.onclick = exportGLB;
+  dom.modalBtnExportGlb?.addEventListener('click', exportGLB);
+  dom.modalBtnExportPng?.addEventListener('click', () => {
+    if (state.viewer3d) {
+      const url = state.viewer3d.exportPNG(4000);
+      const link = document.createElement('a');
+      link.download = `3d-mockup-${state.templateId}-4k.png`;
+      link.href = url;
+      link.click();
+      showToast('✓ 4K 3D PNG exported successfully');
+    }
+  });
   
+  // Fold Sliders
+  const updateFold = (val) => {
+    state.foldProgress = val / 100;
+    dom.inpFold.value = val;
+    dom.txtFoldVal.textContent = Math.round(val) + '%';
+    if (dom.modalInpFold) dom.modalInpFold.value = val;
+    if (dom.modalFoldVal) dom.modalFoldVal.textContent = Math.round(val) + '%';
+    if (state.miniViewer) state.miniViewer.setFoldProgress(state.foldProgress);
+    if (state.viewer3d) state.viewer3d.setFoldProgress(state.foldProgress);
+  };
+
+  dom.inpFold.addEventListener('input', e => updateFold(parseFloat(e.target.value)));
+  dom.modalInpFold?.addEventListener('input', e => updateFold(parseFloat(e.target.value)));
+
+  dom.btnAnimFold.addEventListener('click', () => {
+    const target = state.foldProgress > 0.5 ? 0.0 : 1.0;
+    const activeViewer = (dom.modal3d.style.display === 'flex' && state.viewer3d) ? state.viewer3d : state.miniViewer;
+    if (activeViewer) {
+      activeViewer.animateFold(target, 1000, (p) => {
+        updateFold(p * 100);
+      });
+    }
+  });
+
+  // Finish selector
+  dom.dlFinishGrid.addEventListener('click', (e) => {
+    const btn = e.target.closest('.finish-btn');
+    if (!btn) return;
+    dom.dlFinishGrid.querySelectorAll('.finish-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    state.finish = btn.dataset.finish;
+    if (state.miniViewer) state.miniViewer.setFinish(state.finish);
+    if (state.viewer3d) state.viewer3d.setFinish(state.finish);
+    requestTextureUpdate();
+  });
+
+  // Camera presets in modal
+  $('modal-cam-hero')?.addEventListener('click', () => state.viewer3d?.setCameraPreset('hero'));
+  $('modal-cam-front')?.addEventListener('click', () => state.viewer3d?.setCameraPreset('front'));
+  $('modal-cam-top')?.addEventListener('click', () => state.viewer3d?.setCameraPreset('top'));
+  $('modal-cam-iso')?.addEventListener('click', () => state.viewer3d?.setCameraPreset('isometric'));
+
   dom.inpUpload.addEventListener('change', handleDesignUpload);
   
   dom.slScale.addEventListener('input', (e) => { state.dScale = e.target.value / 100; applyDesignTransform(); });

@@ -1,27 +1,36 @@
 // ─── PackMockup Application Logic ────────────────────────────
+// All 10+ packaging items are full 3D interactive studio models!
 'use strict';
 
 // ════════════════════════════════════════════════════════════
-// CONFIG — which mockups get real 3D viewer
+// 3D CONFIGURATION & PRESETS
 // ════════════════════════════════════════════════════════════
 
-const BOX_3D_IDS = new Set(['tuck-box', 'mailer-box', 'square-box']);
+const FOLDABLE_MODELS = new Set(['tuck-box', 'mailer-box', 'square-box', 'sleeve-box', 'pyramid-box']);
 
-const BOX_3D_DIMS = {
-  'tuck-box':   { w: 1.7, h: 2.55, d: 1.1  },
-  'mailer-box': { w: 2.3, h: 1.50, d: 1.65 },
-  'square-box': { w: 2.0, h: 2.00, d: 2.0  },
+const MOCKUP_3D_DIMS = {
+  'tuck-box':      { w: 1.7, h: 2.55, d: 1.1 },
+  'mailer-box':    { w: 2.3, h: 1.45, d: 1.65 },
+  'square-box':    { w: 2.0, h: 2.00, d: 2.0 },
+  'soda-can':      { radius: 0.8, height: 2.8 },
+  'paper-cup':     { topR: 1.0, botR: 0.72, height: 2.6 },
+  'cosmetic-jar':  { radius: 1.1, height: 1.4 },
+  'spray-bottle':  { radius: 0.8, height: 3.2 },
+  'standup-pouch': { w: 2.2, h: 3.0, d: 1.0 },
+  'flat-pouch':    { w: 1.8, h: 2.4 },
+  'shopping-bag':  { w: 2.4, h: 3.0, d: 1.2 },
+  'sleeve-box':    { w: 2.0, h: 1.2, d: 2.4 },
+  'pillow-box':    { w: 2.2, h: 2.8, d: 0.9 },
+  'pyramid-box':   { baseW: 2.2, height: 2.4 }
 };
 
-// Three.js face order for BoxGeometry:
-// 0=+X Right, 1=-X Left, 2=+Y Top, 3=-Y Bottom, 4=+Z Front, 5=-Z Back
 const FACE_CONFIG = [
-  { idx: 4, name: 'Front',  icon: '⬛', gridArea: 'front'  },
-  { idx: 5, name: 'Back',   icon: '⬜', gridArea: 'back'   },
-  { idx: 1, name: 'Left',   icon: '◀',  gridArea: 'left'   },
-  { idx: 0, name: 'Right',  icon: '▶',  gridArea: 'right'  },
-  { idx: 2, name: 'Top',    icon: '▲',  gridArea: 'top'    },
-  { idx: 3, name: 'Bottom', icon: '▼',  gridArea: 'bottom' },
+  { idx: 'front',  name: 'Front',  icon: '⬛' },
+  { idx: 'back',   name: 'Back',   icon: '⬜' },
+  { idx: 'left',   name: 'Left',   icon: '◀'  },
+  { idx: 'right',  name: 'Right',  icon: '▶'  },
+  { idx: 'top',    name: 'Top',    icon: '▲'  },
+  { idx: 'bottom', name: 'Bottom', icon: '▼'  },
 ];
 
 // ════════════════════════════════════════════════════════════
@@ -34,22 +43,24 @@ const state = {
   filterMode:  'all',
 
   editor: {
-    open:       false,
-    mockupId:   null,
-    is3D:       false,
-    color:      '#f2f2f2',
-    activeFace: 4,        // 3D mode: which face the next upload goes to
-    imgEl:      null,     // 2D mode image
-    scale:      1.0,
-    ox:         0,
-    oy:         0,
-    rotation:   0,
-    opacity:    1.0,
-    background: '#ffffff',
-    resolution: 2000,
+    open:         false,
+    mockupId:     null,
+    color:        '#f5f5f5',
+    finish:       'matte',
+    foldProgress: 1.0,
+    activeFace:   'front',
+    imgEl:        null,      // uploaded image element
+    scale:        1.0,
+    ox:           0,
+    oy:           0,
+    rotation:     0,
+    opacity:      1.0,
+    background:   '#ffffff',
+    resolution:   2000,
+    transparentBg:false,
   },
 
-  viewer3d: null,         // Viewer3D instance (or null)
+  viewer3d: null,
 };
 
 // ════════════════════════════════════════════════════════════
@@ -72,12 +83,17 @@ const initDom = () => {
     filterPopular:    $('filter-popular'),
     filterNew:        $('filter-new'),
 
+    // Editor Header
     ctrlBack:         $('ctrl-back'),
     ctrlTitle:        $('ctrl-title'),
     ctrlCategory:     $('ctrl-category'),
     badge3d:          $('badge-3d'),
-    variantsGrid:     $('variants-grid'),
 
+    // Tabs
+    tabBtns:          document.querySelectorAll('.studio-tab-btn'),
+    tabPanes:         document.querySelectorAll('.tab-pane'),
+
+    // Upload & Artwork Tab
     uploadBtn:        $('upload-btn'),
     uploadBtnSmall:   $('upload-btn-small'),
     fileInput:        $('file-input'),
@@ -86,12 +102,10 @@ const initDom = () => {
     uploadedPreview:  $('uploaded-preview'),
     uploadedImg:      $('uploaded-img'),
     uploadedRemove:   $('uploaded-remove'),
-
     faceSelectorSec:  $('face-selector-section'),
     faceGrid:         $('face-grid'),
-    adjustmentsSec:   $('adjustments-section'),
-    view3dSec:        $('view3d-section'),
 
+    // Sliders
     sliderScale:      $('slider-scale'),
     sliderOx:         $('slider-ox'),
     sliderOy:         $('slider-oy'),
@@ -103,20 +117,56 @@ const initDom = () => {
     valRot:           $('val-rot'),
     valOpacity:       $('val-opacity'),
 
+    // Material & Color Tab
+    appFinishGrid:    $('app-finish-grid'),
+    variantsGrid:     $('variants-grid'),
+
+    // Fold Tab
+    tabFoldBtn:       document.querySelector('[data-tab="tab-fold"]'),
+    appFoldSlider:    $('app-fold-slider'),
+    appFoldVal:       $('app-fold-val'),
+    appBtnAnimFold:   $('app-btn-anim-fold'),
+
+    // Scene & Lighting Tab
+    camHero:          $('cam-hero'),
+    camFront:         $('cam-front'),
+    camSide:          $('cam-side'),
+    camTop:           $('cam-top'),
+    camIso:           $('cam-iso'),
+    camUnfolded:      $('cam-unfolded'),
+    btnAutoRotate:    $('btn-auto-rotate'),
+    btnResetView:     $('btn-reset-view'),
     bgWhite:          $('bg-white'),
     bgLight:          $('bg-light'),
     bgDark:           $('bg-dark'),
     bgCustom:         $('bg-custom'),
     bgColorInput:     $('bg-color-input'),
-    resolutionSel:    $('resolution-sel'),
-    exportBtn:        $('export-btn'),
 
+    // Export Tab
+    resolutionSel:    $('resolution-sel'),
+    chkTransparentBg: $('chk-transparent-bg'),
+    exportBtn:        $('export-btn'),
+    exportGlbBtn:     $('export-glb-btn'),
+
+    // Canvas
     previewCanvas:    $('preview-canvas'),
     viewer3dWrap:     $('viewer3d-wrap'),
     canvasBadgeId:    $('canvas-mockup-id'),
     canvasHint:       $('canvas-hint'),
     toast:            $('toast'),
   };
+};
+
+// ════════════════════════════════════════════════════════════
+// TOAST NOTIFICATIONS
+// ════════════════════════════════════════════════════════════
+
+let toastTimer;
+const showToast = (msg, type = 'success') => {
+  dom.toast.textContent = msg;
+  dom.toast.className = `toast ${type} show`;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => dom.toast.classList.remove('show'), 3200);
 };
 
 // ════════════════════════════════════════════════════════════
@@ -174,20 +224,19 @@ const renderGallery = () => {
     card.style.animationDelay = `${Math.min(idx * 0.04, 0.4)}s`;
     card.dataset.id = mockup.id;
 
-    const is3D = BOX_3D_IDS.has(mockup.id);
     const dots = mockup.variants.slice(0, 6).map(v =>
       `<span class="color-dot" style="background:${v.color}" title="${v.name}"></span>`
     ).join('');
     const badge = mockup.popular ? '<span class="card-badge popular">Popular</span>'
                 : mockup.new     ? '<span class="card-badge new">New</span>'
-                : is3D           ? '<span class="card-badge is3d">3D</span>' : '';
+                : '<span class="card-badge is3d">3D</span>';
 
     card.innerHTML = `
       <div class="card-thumb">
         <canvas id="thumb-${mockup.id}" width="300" height="300"></canvas>
         ${badge}
         <div class="card-hover-overlay">
-          <div class="card-hover-btn">${is3D ? '⬡ Open in 3D' : '✦ Customize Free'}</div>
+          <div class="card-hover-btn">⬡ Open 3D Studio</div>
         </div>
       </div>
       <div class="card-info">
@@ -198,60 +247,59 @@ const renderGallery = () => {
     card.addEventListener('click', () => openEditor(mockup.id));
     dom.mockupGrid.appendChild(card);
 
+    // Fast 2D preview thumbnail
     setTimeout(() => {
       const cv = $(`thumb-${mockup.id}`);
-      if (cv) renderMockup(cv, mockup.render, { color: mockup.variants[0]?.color || '#f2f2f2', background: '#f7f7fb' });
-    }, idx * 20 + 50);
+      if (cv && window.renderMockup) {
+        window.renderMockup(cv, mockup.render, { color: mockup.variants[0]?.color || '#f2f2f2', background: '#f7f7fb' });
+      }
+    }, idx * 15 + 30);
   });
 };
 
 // ════════════════════════════════════════════════════════════
-// EDITOR — OPEN / CLOSE
+// 3D STUDIO EDITOR
 // ════════════════════════════════════════════════════════════
 
 const openEditor = (mockupId) => {
   const mockup = MOCKUPS_DATA.find(m => m.id === mockupId);
   if (!mockup) return;
 
-  const is3D = BOX_3D_IDS.has(mockupId);
+  const isFoldable = FOLDABLE_MODELS.has(mockupId);
 
-  // Reset state
+  // Reset editor state
   Object.assign(state.editor, {
-    open: true,
+    open:         true,
     mockupId,
-    is3D,
-    color:      mockup.variants[0]?.color || '#f2f2f2',
-    activeFace: 4,
-    imgEl:      null,
-    scale:      1.0,
-    ox:         0,
-    oy:         0,
-    rotation:   0,
-    opacity:    1.0,
-    background: '#ffffff',
+    color:        mockup.variants[0]?.color || '#f5f5f5',
+    finish:       'matte',
+    foldProgress: 1.0,
+    activeFace:   'front',
+    imgEl:        null,
+    scale:        1.0,
+    ox:           0,
+    oy:           0,
+    rotation:     0,
+    opacity:      1.0,
+    background:   '#ffffff',
   });
 
-  // Labels
-  dom.ctrlTitle.textContent    = mockup.name;
-  dom.ctrlCategory.textContent = mockup.category;
+  // Header Titles
+  dom.ctrlTitle.textContent     = mockup.name;
+  dom.ctrlCategory.textContent  = mockup.category;
   dom.canvasBadgeId.textContent = mockup.name;
-  dom.badge3d.style.display    = is3D ? '' : 'none';
+  dom.badge3d.textContent       = '⬡ 3D Studio';
 
-  // Show/hide 3D vs 2D panels
-  dom.faceSelectorSec.style.display  = is3D ? '' : 'none';
-  dom.view3dSec.style.display        = is3D ? '' : 'none';
-  dom.adjustmentsSec.style.display   = is3D ? 'none' : '';
-  dom.canvasHint.textContent         = is3D ? ' · Click face button to select face' : ' · Drag image here to upload';
-
-  if (is3D) {
-    dom.uploadLabel.textContent = 'Upload Design for Selected Face';
-    dom.uploadHint.textContent  = 'PNG, JPG, SVG';
-  } else {
-    dom.uploadLabel.textContent = 'Your Design';
-    dom.uploadHint.textContent  = 'PNG, JPG, SVG · Drag onto preview';
+  // Fold Tab visibility
+  if (dom.tabFoldBtn) {
+    dom.tabFoldBtn.style.display = isFoldable ? 'flex' : 'none';
   }
+  dom.faceSelectorSec.style.display = isFoldable ? 'block' : 'none';
 
-  // Color variants
+  // Switch to Artwork tab by default
+  switchTab('tab-artwork');
+
+  // Populate Color variants
   dom.variantsGrid.innerHTML = '';
   mockup.variants.forEach((v, i) => {
     const btn = document.createElement('button');
@@ -263,137 +311,104 @@ const openEditor = (mockupId) => {
       document.querySelectorAll('.variant-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       state.editor.color = v.color;
-      if (state.editor.is3D && state.viewer3d) {
-        state.viewer3d.setColor(v.color);
-      } else {
-        redrawPreview();
-      }
+      if (state.viewer3d) state.viewer3d.setColor(v.color);
     });
     dom.variantsGrid.appendChild(btn);
   });
 
-  // Sliders
+  // Reset Finishes buttons
+  dom.appFinishGrid.querySelectorAll('.finish-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.finish === 'matte');
+  });
+
+  // Reset Sliders
   dom.sliderScale.value   = 100;
   dom.sliderOx.value      = 0;
   dom.sliderOy.value      = 0;
   dom.sliderRot.value     = 0;
   dom.sliderOpacity.value = 100;
+  dom.appFoldSlider.value = 100;
+  dom.appFoldVal.textContent = '100%';
   updateSliderValues();
 
-  // Reset upload area
+  // Reset Artwork Preview
   dom.uploadedPreview.classList.remove('has-image');
   dom.uploadedImg.src = '';
 
-  // Reset bg buttons
+  // Background presets
   document.querySelectorAll('.bg-btn').forEach(b => b.classList.remove('active'));
   dom.bgWhite.classList.add('active');
 
-  // Show editor
+  // Build Face selector buttons (for boxes)
+  if (isFoldable) {
+    buildFaceGrid();
+  }
+
+  // Switch view from Gallery to Editor
   dom.galleryPage.style.display = 'none';
   dom.editorPage.classList.add('open');
 
-  // 3D or 2D canvas
-  if (is3D) {
-    dom.previewCanvas.style.display = 'none';
-    dom.viewer3dWrap.style.display  = '';
-    initViewer3D(mockupId);
-    buildFaceGrid();
-  } else {
-    dom.previewCanvas.style.display = '';
-    dom.viewer3dWrap.style.display  = 'none';
-    disposeViewer3D();
-    dom.previewCanvas.width  = 600;
-    dom.previewCanvas.height = 600;
-    redrawPreview();
-  }
+  // Initialize Three.js 3D Viewer
+  init3DStudio(mockupId);
 };
 
 const closeEditor = () => {
   state.editor.open = false;
   dom.editorPage.classList.remove('open');
   dom.galleryPage.style.display = '';
-  disposeViewer3D();
+  dispose3DStudio();
 };
 
-// ════════════════════════════════════════════════════════════
-// VIEWER 3D — lifecycle
-// ════════════════════════════════════════════════════════════
-
-const initViewer3D = (mockupId) => {
-  disposeViewer3D();
-  const dims = BOX_3D_DIMS[mockupId] || { w: 1.8, h: 2.5, d: 1.1 };
+const init3DStudio = (mockupId) => {
+  dispose3DStudio();
+  const dims = MOCKUP_3D_DIMS[mockupId] || { w: 1.8, h: 2.5, d: 1.1 };
+  
   state.viewer3d = new Viewer3D(dom.viewer3dWrap, {
-    color: state.editor.color,
+    modelType: mockupId,
     dims,
+    color: state.editor.color,
+    finish: state.editor.finish,
+    foldProgress: state.editor.foldProgress
   });
 
-  // Set background to match current bg state
   state.viewer3d.setBackground(state.editor.background);
-
-  // Auto-rotate button sync
   refreshAutoRotateBtn();
 };
 
-const disposeViewer3D = () => {
+const dispose3DStudio = () => {
   if (state.viewer3d) {
     state.viewer3d.dispose();
     state.viewer3d = null;
   }
 };
 
-// ════════════════════════════════════════════════════════════
-// FACE GRID (3D mode)
-// ════════════════════════════════════════════════════════════
+// ─── TAB NAVIGATION ─────────────────────────────────────
+const switchTab = (targetId) => {
+  dom.tabBtns.forEach(btn => btn.classList.toggle('active', btn.dataset.tab === targetId));
+  dom.tabPanes.forEach(pane => {
+    pane.style.display = pane.id === targetId ? 'block' : 'none';
+  });
+};
 
+// ─── FACE GRID ──────────────────────────────────────────
 const buildFaceGrid = () => {
-  if (!dom.faceGrid) return;
   dom.faceGrid.innerHTML = '';
   FACE_CONFIG.forEach(fc => {
     const btn = document.createElement('button');
-    btn.className = 'face-btn' + (fc.idx === 4 ? ' active' : '');
+    btn.className = 'face-btn' + (fc.idx === state.editor.activeFace ? ' active' : '');
     btn.dataset.face = fc.idx;
-    btn.id = `face-btn-${fc.idx}`;
-    btn.innerHTML = `
-      <span class="face-btn-label">${fc.icon} ${fc.name}</span>
-      <span class="face-dot" id="face-dot-${fc.idx}" style="display:none"></span>
-    `;
-    btn.title = `Click to select ${fc.name} face, then upload an image`;
+    btn.innerHTML = `<span>${fc.icon} ${fc.name}</span>`;
     btn.addEventListener('click', () => {
       document.querySelectorAll('.face-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       state.editor.activeFace = fc.idx;
-      if (state.viewer3d) state.viewer3d.viewFace(fc.idx);
+      if (state.viewer3d) state.viewer3d.setCameraPreset(fc.idx === 'top' ? 'top' : (fc.idx === 'back' ? 'side' : 'hero'));
     });
     dom.faceGrid.appendChild(btn);
   });
 };
 
-const refreshFaceDots = () => {
-  if (!state.viewer3d) return;
-  for (let i = 0; i < 6; i++) {
-    const dot = $(`face-dot-${i}`);
-    if (dot) dot.style.display = state.viewer3d.getFaceImage(i) ? '' : 'none';
-  }
-};
-
-// ════════════════════════════════════════════════════════════
-// 2D PREVIEW
-// ════════════════════════════════════════════════════════════
-
-const getImgOpts = () => ({
-  scale:    parseFloat(dom.sliderScale.value) / 100,
-  ox:       parseFloat(dom.sliderOx.value) * 2,
-  oy:       parseFloat(dom.sliderOy.value) * 2,
-  rotation: parseFloat(dom.sliderRot.value),
-  opacity:  parseFloat(dom.sliderOpacity.value) / 100,
-});
-
-const redrawPreview = () => {
-  if (!state.editor.open || state.editor.is3D) return;
-  const { mockupId, color, imgEl, background } = state.editor;
-  renderMockup(dom.previewCanvas, mockupId, { color, img: imgEl, imgOpts: getImgOpts(), background });
-};
-
+// ─── ARTWORK & TEXTURE MAPPING ──────────────────────────
 const updateSliderValues = () => {
   dom.valScale.textContent   = `${dom.sliderScale.value}%`;
   dom.valOx.textContent      = dom.sliderOx.value;
@@ -402,101 +417,75 @@ const updateSliderValues = () => {
   dom.valOpacity.textContent = `${dom.sliderOpacity.value}%`;
 };
 
-// ════════════════════════════════════════════════════════════
-// AUTO-ROTATE BUTTON SYNC
-// ════════════════════════════════════════════════════════════
+// Generates an adjusted canvas from the uploaded artwork
+const generateArtworkCanvas = (img, size = 1024) => {
+  if (!img) return null;
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = size;
+  const ctx = cv.getContext('2d');
 
+  const scale = parseFloat(dom.sliderScale.value) / 100;
+  const ox = (parseFloat(dom.sliderOx.value) / 100) * size;
+  const oy = (parseFloat(dom.sliderOy.value) / 100) * size;
+  const rot = (parseFloat(dom.sliderRot.value) * Math.PI) / 180;
+  const op = parseFloat(dom.sliderOpacity.value) / 100;
+
+  const iw = img.naturalWidth || img.width || 1;
+  const ih = img.naturalHeight || img.height || 1;
+  const baseScale = Math.max(size / iw, size / ih);
+  const dw = iw * baseScale * scale;
+  const dh = ih * baseScale * scale;
+
+  ctx.clearRect(0, 0, size, size);
+  ctx.save();
+  ctx.translate(size / 2 + ox, size / 2 + oy);
+  ctx.rotate(rot);
+  ctx.globalAlpha = op;
+  ctx.drawImage(img, -dw / 2, -dh / 2, dw, dh);
+  ctx.restore();
+
+  return cv;
+};
+
+const applyArtworkTo3D = () => {
+  if (!state.viewer3d || !state.editor.imgEl) return;
+  const cv = generateArtworkCanvas(state.editor.imgEl);
+  state.viewer3d.setFaceImage(state.editor.activeFace, cv);
+};
+
+const handleImageLoad = (img, url) => {
+  state.editor.imgEl = img;
+  dom.uploadedImg.src = url;
+  dom.uploadedPreview.classList.add('has-image');
+  applyArtworkTo3D();
+  showToast('✓ Artwork applied to 3D model!');
+};
+
+// ─── AUTO-ROTATE BUTTON ─────────────────────────────────
 const refreshAutoRotateBtn = () => {
-  const btn = $('btn-auto-rotate');
-  if (!btn) return;
-  const on = state.viewer3d?.isAutoRotating() ?? true;
-  btn.classList.toggle('active', on);
+  const on = state.viewer3d?.isAutoRotating() ?? false;
+  dom.btnAutoRotate?.classList.toggle('active', on);
 };
 
 // ════════════════════════════════════════════════════════════
-// EXPORT
+// EVENT INITIALIZATION
 // ════════════════════════════════════════════════════════════
-
-const exportImage = () => {
-  const res = parseInt(dom.resolutionSel.value);
-  const { mockupId, is3D, color, imgEl, background } = state.editor;
-
-  if (is3D && state.viewer3d) {
-    state.viewer3d.setBackground(background === '#ffffff' ? '#ffffff' : background);
-    const dataURL = state.viewer3d.exportPNG(res);
-    const link    = document.createElement('a');
-    const mockup  = MOCKUPS_DATA.find(m => m.id === mockupId);
-    link.download = `${mockup?.name?.replace(/\s+/g, '-').toLowerCase() || 'mockup'}-3d-${res}px.png`;
-    link.href     = dataURL;
-    link.click();
-    showToast('✓ 3D mockup exported — no watermark!', 'success');
-    return;
-  }
-
-  // 2D export
-  const exportCanvas = document.createElement('canvas');
-  exportCanvas.width = exportCanvas.height = res;
-  const factor = res / dom.previewCanvas.width;
-  const rawOpts = getImgOpts();
-  renderMockup(exportCanvas, mockupId, {
-    color,
-    img:     imgEl,
-    imgOpts: { ...rawOpts, ox: rawOpts.ox * factor, oy: rawOpts.oy * factor },
-    background,
-  });
-  const link = document.createElement('a');
-  const mockup = MOCKUPS_DATA.find(m => m.id === mockupId);
-  link.download = `${mockup?.name?.replace(/\s+/g, '-').toLowerCase() || 'mockup'}-${res}px.png`;
-  link.href     = exportCanvas.toDataURL('image/png', 1.0);
-  link.click();
-  showToast('✓ Image exported successfully!', 'success');
-};
-
-// ════════════════════════════════════════════════════════════
-// TOAST
-// ════════════════════════════════════════════════════════════
-
-let toastTimer;
-const showToast = (msg, type = '') => {
-  dom.toast.textContent = msg;
-  dom.toast.className   = `toast ${type} show`;
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => dom.toast.classList.remove('show'), 3000);
-};
-
-// ════════════════════════════════════════════════════════════
-// EVENT LISTENERS
-// ════════════════════════════════════════════════════════════
-
-const handleImageLoad = (imgEl, url) => {
-  const { is3D, activeFace } = state.editor;
-
-  if (is3D && state.viewer3d) {
-    state.viewer3d.setFaceImage(activeFace, imgEl);
-    refreshFaceDots();
-    // Show "change" label in upload button
-    dom.uploadedImg.src = url;
-    dom.uploadedPreview.classList.add('has-image');
-    showToast(`✓ Design applied to ${FACE_CONFIG.find(f=>f.idx===activeFace)?.name || 'face'}`, 'success');
-  } else {
-    state.editor.imgEl = imgEl;
-    dom.uploadedImg.src = url;
-    dom.uploadedPreview.classList.add('has-image');
-    redrawPreview();
-  }
-};
 
 const initEvents = () => {
-  // Search
-  dom.searchInput.addEventListener('input', () => {
-    state.searchQuery = dom.searchInput.value.trim();
+  // Tabs
+  dom.tabBtns.forEach(btn => {
+    btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+  });
+
+  // Search & Filter
+  dom.searchInput.addEventListener('input', e => {
+    state.searchQuery = e.target.value.trim();
     renderGallery();
   });
 
-  // Filter chips
   const setFilter = mode => {
     state.filterMode = mode;
-    [dom.filterAll, dom.filterPopular, dom.filterNew].forEach(b => b.classList.remove('active'));
+    [dom.filterAll, dom.filterPopular, dom.filterNew].forEach(b => b?.classList.remove('active'));
     $(`filter-${mode}`)?.classList.add('active');
     renderGallery();
   };
@@ -504,11 +493,11 @@ const initEvents = () => {
   dom.filterPopular.addEventListener('click', () => setFilter('popular'));
   dom.filterNew.addEventListener('click',     () => setFilter('new'));
 
-  // Back
+  // Back / Close
   dom.ctrlBack.addEventListener('click', closeEditor);
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && state.editor.open) closeEditor(); });
 
-  // File upload
+  // File Upload
   const triggerUpload = () => dom.fileInput.click();
   dom.uploadBtn.addEventListener('click', triggerUpload);
   dom.uploadBtnSmall?.addEventListener('click', triggerUpload);
@@ -525,27 +514,70 @@ const initEvents = () => {
     dom.fileInput.value = '';
   });
 
-  // Remove uploaded image
+  // Remove Artwork
   dom.uploadedRemove.addEventListener('click', () => {
-    if (state.editor.is3D && state.viewer3d) {
+    state.editor.imgEl = null;
+    dom.uploadedPreview.classList.remove('has-image');
+    dom.uploadedImg.src = '';
+    if (state.viewer3d) {
       state.viewer3d.setFaceImage(state.editor.activeFace, null);
-      refreshFaceDots();
-      // Only hide preview if ALL faces cleared
-      if (!state.viewer3d.hasAnyImage()) {
-        dom.uploadedPreview.classList.remove('has-image');
-        dom.uploadedImg.src = '';
-      }
-    } else {
-      state.editor.imgEl = null;
-      dom.uploadedPreview.classList.remove('has-image');
-      dom.uploadedImg.src = '';
-      redrawPreview();
     }
   });
 
-  // 2D sliders
+  // Sliders
   [dom.sliderScale, dom.sliderOx, dom.sliderOy, dom.sliderRot, dom.sliderOpacity].forEach(s => {
-    s.addEventListener('input', () => { updateSliderValues(); redrawPreview(); });
+    s.addEventListener('input', () => {
+      updateSliderValues();
+      applyArtworkTo3D();
+    });
+  });
+
+  // Finish selector
+  dom.appFinishGrid.addEventListener('click', e => {
+    const btn = e.target.closest('.finish-btn');
+    if (!btn) return;
+    dom.appFinishGrid.querySelectorAll('.finish-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    state.editor.finish = btn.dataset.finish;
+    if (state.viewer3d) state.viewer3d.setFinish(state.editor.finish);
+  });
+
+  // Fold Slider & Button
+  dom.appFoldSlider.addEventListener('input', e => {
+    const val = parseFloat(e.target.value);
+    state.editor.foldProgress = val / 100;
+    dom.appFoldVal.textContent = `${Math.round(val)}%`;
+    if (state.viewer3d) state.viewer3d.setFoldProgress(state.editor.foldProgress);
+  });
+
+  dom.appBtnAnimFold.addEventListener('click', () => {
+    if (!state.viewer3d) return;
+    const target = state.editor.foldProgress > 0.5 ? 0.0 : 1.0;
+    state.viewer3d.animateFold(target, 1000, p => {
+      state.editor.foldProgress = p;
+      dom.appFoldSlider.value = p * 100;
+      dom.appFoldVal.textContent = `${Math.round(p * 100)}%`;
+    });
+  });
+
+  // Camera Presets
+  dom.camHero?.addEventListener('click',      () => state.viewer3d?.setCameraPreset('hero'));
+  dom.camFront?.addEventListener('click',     () => state.viewer3d?.setCameraPreset('front'));
+  dom.camSide?.addEventListener('click',      () => state.viewer3d?.setCameraPreset('side'));
+  dom.camTop?.addEventListener('click',       () => state.viewer3d?.setCameraPreset('top'));
+  dom.camIso?.addEventListener('click',       () => state.viewer3d?.setCameraPreset('isometric'));
+  dom.camUnfolded?.addEventListener('click',  () => state.viewer3d?.setCameraPreset('unfolded'));
+
+  // Turntable
+  dom.btnAutoRotate?.addEventListener('click', () => {
+    if (!state.viewer3d) return;
+    state.viewer3d.toggleAutoRotate();
+    refreshAutoRotateBtn();
+  });
+  dom.btnResetView?.addEventListener('click', () => {
+    if (!state.viewer3d) return;
+    state.viewer3d.resetView();
+    refreshAutoRotateBtn();
   });
 
   // Background
@@ -556,11 +588,7 @@ const initEvents = () => {
       document.querySelectorAll('.bg-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       state.editor.background = bgMap[btn.id] || '#ffffff';
-      if (state.editor.is3D && state.viewer3d) {
-        state.viewer3d.setBackground(state.editor.background);
-      } else {
-        redrawPreview();
-      }
+      if (state.viewer3d) state.viewer3d.setBackground(state.editor.background);
     });
   });
 
@@ -569,41 +597,30 @@ const initEvents = () => {
     document.querySelectorAll('.bg-btn').forEach(b => b.classList.remove('active'));
     dom.bgCustom?.classList.add('active');
     state.editor.background = e.target.value;
-    if (state.editor.is3D && state.viewer3d) {
-      state.viewer3d.setBackground(e.target.value);
-    } else {
-      redrawPreview();
-    }
+    if (state.viewer3d) state.viewer3d.setBackground(e.target.value);
   });
 
-  // 3D Controls
-  $('btn-auto-rotate')?.addEventListener('click', () => {
+  // Export 4K PNG
+  dom.exportBtn.addEventListener('click', () => {
     if (!state.viewer3d) return;
-    state.viewer3d.toggleAutoRotate();
-    refreshAutoRotateBtn();
+    const res = parseInt(dom.resolutionSel.value) || 2000;
+    const isTransparent = dom.chkTransparentBg.checked;
+    const dataURL = state.viewer3d.exportPNG(res, isTransparent);
+    const link = document.createElement('a');
+    link.download = `packmockup-${state.editor.mockupId}-${res}px.png`;
+    link.href = dataURL;
+    link.click();
+    showToast(`✓ High-Res (${res}px) PNG exported!`);
   });
-  $('btn-reset-view')?.addEventListener('click', () => {
+
+  // Export 3D Model (.GLB)
+  dom.exportGlbBtn.addEventListener('click', () => {
     if (!state.viewer3d) return;
-    state.viewer3d.resetView();
-    setTimeout(refreshAutoRotateBtn, 100);
+    state.viewer3d.exportGLTF(`packmockup-${state.editor.mockupId}.glb`);
+    showToast('✓ 3D Model (.GLB) exported!');
   });
 
-  // Export
-  dom.exportBtn.addEventListener('click', exportImage);
-
-  // Drag-drop onto 2D canvas
-  dom.previewCanvas.addEventListener('dragover', e => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; });
-  dom.previewCanvas.addEventListener('drop', e => {
-    e.preventDefault();
-    const file = e.dataTransfer.files?.[0];
-    if (!file || !file.type.startsWith('image/')) return;
-    const url = URL.createObjectURL(file);
-    const img = new Image();
-    img.onload = () => handleImageLoad(img, url);
-    img.src = url;
-  });
-
-  // Drag-drop onto 3D canvas
+  // Drag & Drop Artwork onto 3D Canvas
   dom.viewer3dWrap?.addEventListener('dragover', e => { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; });
   dom.viewer3dWrap?.addEventListener('drop', e => {
     e.preventDefault();
@@ -617,7 +634,7 @@ const initEvents = () => {
 };
 
 // ════════════════════════════════════════════════════════════
-// INIT
+// DOM CONTENT LOADED
 // ════════════════════════════════════════════════════════════
 
 document.addEventListener('DOMContentLoaded', () => {

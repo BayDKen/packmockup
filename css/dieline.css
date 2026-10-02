@@ -370,6 +370,43 @@
   color: var(--primary);
 }
 
+.dl-export-btn.special {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  border: none;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
+}
+
+.dl-export-btn.special:hover {
+  opacity: 0.95;
+  transform: translateY(-1px);
+}
+
+/* 3D Fold Box in Dieline Panel */
+.dl-fold-box {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+  margin-bottom: 20px;
+}
+
+.dl-fold-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+
+.dl-fold-slider {
+  width: 100%;
+  accent-color: var(--primary);
+  cursor: pointer;
+}
+
 .export-note {
   font-size: 11px;
   color: var(--text-muted);
@@ -380,3 +417,4 @@
   justify-content: center;
   gap: 6px;
 }
+

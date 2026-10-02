@@ -1018,7 +1018,8 @@ function renderMockup(canvas, mockupId, opts = {}) {
     ctx.fillRect(0, 0, cw, ch);
   }
 
-  const fn = RENDERERS[mockupId];
+  const fn = RENDERERS[mockupId] || RENDERERS['square-box'] || RENDERERS['tuck-box'];
   if (!fn) { console.warn('No renderer:', mockupId); return; }
   fn(ctx, { cw, ch, color, img, imgOpts });
 }
+

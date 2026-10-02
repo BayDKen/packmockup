@@ -165,6 +165,51 @@ const MOCKUPS_DATA = [
     description: 'Paper shopping bag with rope handles',
     render: 'shopping-bag',
   },
+  {
+    id: 'sleeve-box',
+    name: 'Sleeve Wrap Box',
+    category: 'boxes',
+    tags: ['box', 'sleeve', 'wrap', 'sliding', 'tray'],
+    popular: false,
+    new: true,
+    variants: [
+      { id: 'white', name: 'White', color: '#f2f2f2' },
+      { id: 'kraft', name: 'Kraft', color: '#c8a97c' },
+      { id: 'black', name: 'Black', color: '#1c1c1c' },
+    ],
+    description: 'Sliding sleeve wrapper with pull-out tray',
+    render: 'sleeve-box',
+  },
+  {
+    id: 'pillow-box',
+    name: 'Pillow Box',
+    category: 'boxes',
+    tags: ['box', 'pillow', 'gift', 'curved'],
+    popular: false,
+    new: true,
+    variants: [
+      { id: 'white', name: 'White', color: '#f2f2f2' },
+      { id: 'kraft', name: 'Kraft', color: '#c8a97c' },
+      { id: 'rose',  name: 'Rose',  color: '#c4607e' },
+    ],
+    description: 'Curved pillow packaging box',
+    render: 'pillow-box',
+  },
+  {
+    id: 'pyramid-box',
+    name: 'Pyramid Box',
+    category: 'boxes',
+    tags: ['box', 'pyramid', 'geometric', 'favor'],
+    popular: false,
+    new: true,
+    variants: [
+      { id: 'white', name: 'White', color: '#f2f2f2' },
+      { id: 'gold',  name: 'Gold',  color: '#c9a227' },
+      { id: 'black', name: 'Black', color: '#1c1c1c' },
+    ],
+    description: 'Four-sided geometric pyramid favor box',
+    render: 'pyramid-box',
+  },
 ];
 
 const CATEGORIES = [

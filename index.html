@@ -79,123 +79,198 @@
         <div id="ctrl-title" class="ctrl-title">Mockup Name</div>
         <div style="display:flex;align-items:center;gap:8px;margin-top:4px;">
           <span id="ctrl-category" class="ctrl-category"></span>
-          <span id="badge-3d" class="badge-3d" style="display:none">⬡ 3D</span>
+          <span id="badge-3d" class="badge-3d">⬡ 3D Studio</span>
         </div>
       </div>
 
-      <!-- ── Upload / Design ──────────────────────────── -->
-      <div class="ctrl-section">
-        <div class="ctrl-section-label" id="upload-label">Your Design</div>
-        <label class="upload-btn" id="upload-btn">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-            <polyline points="17 8 12 3 7 8"/>
-            <line x1="12" y1="3" x2="12" y2="15"/>
-          </svg>
-          Upload Image
-        </label>
-        <p class="upload-hint" id="upload-hint">PNG, JPG, SVG · Drag onto preview</p>
-        <div class="uploaded-preview" id="uploaded-preview">
-          <img id="uploaded-img" src="" alt="Design" />
-          <div class="uploaded-preview-remove" id="uploaded-remove" title="Remove">✕</div>
-        </div>
-        <button class="upload-btn upload-btn-small" id="upload-btn-small" style="display:none">Change Image</button>
-      </div>
-      <input type="file" id="file-input" accept="image/*" style="display:none" />
-
-      <!-- ── Face Selector (3D boxes only) ────────────── -->
-      <div class="ctrl-section" id="face-selector-section" style="display:none">
-        <div class="ctrl-section-label">Apply to Face</div>
-        <div class="face-grid" id="face-grid"></div>
-        <p class="face-hint">Upload a different design for each face</p>
+      <!-- ── Studio Navigation Tabs ───────────────────── -->
+      <div class="studio-tabs">
+        <button class="studio-tab-btn active" data-tab="tab-artwork">🎨 Artwork</button>
+        <button class="studio-tab-btn" data-tab="tab-material">✨ Material</button>
+        <button class="studio-tab-btn" data-tab="tab-fold">🎬 Fold</button>
+        <button class="studio-tab-btn" data-tab="tab-scene">💡 Scene</button>
+        <button class="studio-tab-btn" data-tab="tab-export">💾 Export</button>
       </div>
 
-      <!-- ── Color Variants ───────────────────────────── -->
-      <div class="ctrl-section">
-        <div class="ctrl-section-label">Mockup Color</div>
-        <div class="variants-grid" id="variants-grid"></div>
-      </div>
-
-      <!-- ── Image Adjustments (2D mode) ─────────────── -->
-      <div class="ctrl-section" id="adjustments-section">
-        <div class="ctrl-section-label">Image Adjustments</div>
-        <div class="slider-row">
-          <span class="slider-label">Scale</span>
-          <input type="range" class="slider" id="slider-scale" min="30" max="200" value="100" step="1" />
-          <span class="slider-value" id="val-scale">100%</span>
-        </div>
-        <div class="slider-row">
-          <span class="slider-label">Offset X</span>
-          <input type="range" class="slider" id="slider-ox" min="-100" max="100" value="0" step="1" />
-          <span class="slider-value" id="val-ox">0</span>
-        </div>
-        <div class="slider-row">
-          <span class="slider-label">Offset Y</span>
-          <input type="range" class="slider" id="slider-oy" min="-100" max="100" value="0" step="1" />
-          <span class="slider-value" id="val-oy">0</span>
-        </div>
-        <div class="slider-row">
-          <span class="slider-label">Rotation</span>
-          <input type="range" class="slider" id="slider-rot" min="-180" max="180" value="0" step="1" />
-          <span class="slider-value" id="val-rot">0°</span>
-        </div>
-        <div class="slider-row">
-          <span class="slider-label">Opacity</span>
-          <input type="range" class="slider" id="slider-opacity" min="10" max="100" value="100" step="1" />
-          <span class="slider-value" id="val-opacity">100%</span>
-        </div>
-      </div>
-
-      <!-- ── 3D View Controls (3D mode only) ─────────── -->
-      <div class="ctrl-section" id="view3d-section" style="display:none">
-        <div class="ctrl-section-label">3D Controls</div>
-        <div class="view3d-btns">
-          <button class="view3d-btn active" id="btn-auto-rotate">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-              <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/>
-              <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/>
+      <!-- ════ TAB 1: ARTWORK ════ -->
+      <div id="tab-artwork" class="tab-pane">
+        <div class="ctrl-section">
+          <div class="ctrl-section-label" id="upload-label">Your Design</div>
+          <label class="upload-btn" id="upload-btn">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="17 8 12 3 7 8"/>
+              <line x1="12" y1="3" x2="12" y2="15"/>
             </svg>
-            Auto Rotate
+            Upload Artwork
+          </label>
+          <p class="upload-hint" id="upload-hint">PNG, JPG, SVG · Drag onto 3D model</p>
+          <div class="uploaded-preview" id="uploaded-preview">
+            <img id="uploaded-img" src="" alt="Design" />
+            <div class="uploaded-preview-remove" id="uploaded-remove" title="Remove">✕</div>
+          </div>
+          <button class="upload-btn upload-btn-small" id="upload-btn-small" style="display:none">Change Artwork</button>
+        </div>
+        <input type="file" id="file-input" accept="image/*" style="display:none" />
+
+        <!-- Face Selector (for box models) -->
+        <div class="ctrl-section" id="face-selector-section">
+          <div class="ctrl-section-label">Apply to Face</div>
+          <div class="face-grid" id="face-grid"></div>
+          <p class="face-hint">Select a face or apply to whole package</p>
+        </div>
+
+        <!-- Image Adjustments -->
+        <div class="ctrl-section" id="adjustments-section">
+          <div class="ctrl-section-label">Artwork Adjustments</div>
+          <div class="slider-row">
+            <span class="slider-label">Scale</span>
+            <input type="range" class="slider" id="slider-scale" min="30" max="250" value="100" step="1" />
+            <span class="slider-value" id="val-scale">100%</span>
+          </div>
+          <div class="slider-row">
+            <span class="slider-label">Offset X</span>
+            <input type="range" class="slider" id="slider-ox" min="-100" max="100" value="0" step="1" />
+            <span class="slider-value" id="val-ox">0</span>
+          </div>
+          <div class="slider-row">
+            <span class="slider-label">Offset Y</span>
+            <input type="range" class="slider" id="slider-oy" min="-100" max="100" value="0" step="1" />
+            <span class="slider-value" id="val-oy">0</span>
+          </div>
+          <div class="slider-row">
+            <span class="slider-label">Rotation</span>
+            <input type="range" class="slider" id="slider-rot" min="-180" max="180" value="0" step="1" />
+            <span class="slider-value" id="val-rot">0°</span>
+          </div>
+          <div class="slider-row">
+            <span class="slider-label">Opacity</span>
+            <input type="range" class="slider" id="slider-opacity" min="10" max="100" value="100" step="1" />
+            <span class="slider-value" id="val-opacity">100%</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ════ TAB 2: MATERIAL & FINISH ════ -->
+      <div id="tab-material" class="tab-pane" style="display:none;">
+        <div class="ctrl-section">
+          <div class="ctrl-section-label">Surface Material Finish</div>
+          <div class="finish-grid" id="app-finish-grid">
+            <button class="finish-btn active" data-finish="matte"><span class="finish-preview-dot" style="background:#f2f2f2;"></span>Matte Paper</button>
+            <button class="finish-btn" data-finish="kraft"><span class="finish-preview-dot" style="background:#c8a97c;"></span>Kraft Board</button>
+            <button class="finish-btn" data-finish="glossy"><span class="finish-preview-dot" style="background:#ffffff;box-shadow:inset 0 0 4px #aaa;"></span>Gloss Coated</button>
+            <button class="finish-btn" data-finish="gold-foil"><span class="finish-preview-dot" style="background:#d4af37;"></span>Gold Foil</button>
+            <button class="finish-btn" data-finish="silver-foil"><span class="finish-preview-dot" style="background:#e0e4e8;"></span>Silver Foil</button>
+            <button class="finish-btn" data-finish="rose-gold"><span class="finish-preview-dot" style="background:#b5767a;"></span>Rose Gold</button>
+            <button class="finish-btn" data-finish="soft-touch"><span class="finish-preview-dot" style="background:#2b2b2b;"></span>Soft Touch</button>
+          </div>
+        </div>
+
+        <div class="ctrl-section">
+          <div class="ctrl-section-label">Base Color Palette</div>
+          <div class="variants-grid" id="variants-grid"></div>
+        </div>
+      </div>
+
+      <!-- ════ TAB 3: 3D FOLDING ════ -->
+      <div id="tab-fold" class="tab-pane" style="display:none;">
+        <div class="fold-box">
+          <div class="fold-header">
+            <span class="fold-title">Fold Progress</span>
+            <span class="fold-val" id="app-fold-val">100%</span>
+          </div>
+          <input type="range" class="slider" id="app-fold-slider" min="0" max="100" value="100" style="width:100%;" />
+          <button class="btn-animate-fold" id="app-btn-anim-fold">
+            ▶ Animate Fold / Unfold
           </button>
-          <button class="view3d-btn" id="btn-reset-view">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-              <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+        </div>
+        <p class="view3d-hint" style="text-align:left; margin-top:8px;">
+          Unfold the packaging to see how the flat sheet transforms into the 3D product!
+        </p>
+      </div>
+
+      <!-- ════ TAB 4: SCENE & LIGHTING ════ -->
+      <div id="tab-scene" class="tab-pane" style="display:none;">
+        <div class="ctrl-section">
+          <div class="ctrl-section-label">Camera Angle Presets</div>
+          <div class="camera-grid">
+            <button class="cam-btn" id="cam-hero">Hero (3/4)</button>
+            <button class="cam-btn" id="cam-front">Front</button>
+            <button class="cam-btn" id="cam-side">Side</button>
+            <button class="cam-btn" id="cam-top">Top</button>
+            <button class="cam-btn" id="cam-iso">Isometric</button>
+            <button class="cam-btn" id="cam-unfolded">Flat View</button>
+          </div>
+        </div>
+
+        <div class="ctrl-section">
+          <div class="ctrl-section-label">Turntable Controls</div>
+          <div class="view3d-btns">
+            <button class="view3d-btn" id="btn-auto-rotate">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/>
+                <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/>
+              </svg>
+              Auto Rotate
+            </button>
+            <button class="view3d-btn" id="btn-reset-view">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+              </svg>
+              Reset Camera
+            </button>
+          </div>
+          <p class="view3d-hint">🖱 Drag to rotate · Scroll to zoom · Right-click/two-finger pan</p>
+        </div>
+
+        <div class="ctrl-section">
+          <div class="ctrl-section-label">Studio Background</div>
+          <div class="bg-options">
+            <button class="bg-btn white active" id="bg-white" title="White"></button>
+            <button class="bg-btn light"  id="bg-light" title="Light Gray"></button>
+            <button class="bg-btn dark"   id="bg-dark"  title="Dark"></button>
+            <button class="bg-btn custom" id="bg-custom" title="Custom Color"></button>
+          </div>
+          <input type="color" id="bg-color-input" class="bg-color-input" value="#ffffff" />
+        </div>
+      </div>
+
+      <!-- ════ TAB 5: EXPORT STUDIO ════ -->
+      <div id="tab-export" class="tab-pane" style="display:none;">
+        <div class="ctrl-section">
+          <div class="ctrl-section-label">Render Quality & Format</div>
+          <select id="resolution-sel" class="resolution-select" style="margin-bottom:12px;">
+            <option value="1000">1000 × 1000 px (Fast)</option>
+            <option value="2000" selected>2000 × 2000 px (Recommended)</option>
+            <option value="3000">3000 × 3000 px (High-Res Studio)</option>
+            <option value="4000">4000 × 4000 px (Ultra 4K Print)</option>
+          </select>
+
+          <label style="display:flex; align-items:center; gap:8px; font-size:12px; margin-bottom:16px; cursor:pointer;">
+            <input type="checkbox" id="chk-transparent-bg" />
+            Transparent Background
+          </label>
+
+          <button class="export-btn" id="export-btn">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="7 10 12 15 17 10"/>
+              <line x1="12" y1="15" x2="12" y2="3"/>
             </svg>
-            Reset View
+            Export High-Res PNG
           </button>
-        </div>
-        <p class="view3d-hint">🖱 Drag to rotate · Scroll to zoom · Two-finger pan</p>
-      </div>
 
-      <!-- ── Background ──────────────────────────────── -->
-      <div class="ctrl-section">
-        <div class="ctrl-section-label">Background</div>
-        <div class="bg-options">
-          <button class="bg-btn white active" id="bg-white" title="White"></button>
-          <button class="bg-btn light"  id="bg-light" title="Light Gray"></button>
-          <button class="bg-btn dark"   id="bg-dark"  title="Dark"></button>
-          <button class="bg-btn custom" id="bg-custom" title="Custom Color"></button>
-        </div>
-        <input type="color" id="bg-color-input" class="bg-color-input" value="#ffffff" />
-      </div>
+          <button class="export-btn-glb" id="export-glb-btn">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+              <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+              <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
+              <line x1="12" y1="22.08" x2="12" y2="12"/>
+            </svg>
+            Download 3D Model (.GLB)
+          </button>
 
-      <!-- ── Export ───────────────────────────────────── -->
-      <div class="export-section">
-        <select id="resolution-sel" class="resolution-select">
-          <option value="1000">1000 × 1000 px</option>
-          <option value="2000" selected>2000 × 2000 px (Recommended)</option>
-          <option value="3000">3000 × 3000 px (High-res)</option>
-          <option value="4000">4000 × 4000 px (Print)</option>
-        </select>
-        <button class="export-btn" id="export-btn">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-            <polyline points="7 10 12 15 17 10"/>
-            <line x1="12" y1="15" x2="12" y2="3"/>
-          </svg>
-          Export PNG — FREE
-        </button>
-        <p class="export-free-tag">✓ No watermark &nbsp;·&nbsp; ✓ No account &nbsp;·&nbsp; ✓ Free forever</p>
+          <p class="export-free-tag" style="margin-top:14px;">✓ Free Forever · ✓ No Watermark · ✓ Commercial Ready</p>
+        </div>
       </div>
 
     </div><!-- /editor-controls -->
@@ -204,18 +279,18 @@
     <div class="editor-canvas-area" id="editor-canvas-area">
       <div class="canvas-bg-dots"></div>
       <div class="canvas-wrapper" id="canvas-wrapper">
-        <!-- 2D canvas (non-box mockups) -->
-        <canvas id="preview-canvas" width="600" height="600"></canvas>
+        <!-- 2D canvas (fallback thumbnail) -->
+        <canvas id="preview-canvas" width="600" height="600" style="display:none;"></canvas>
 
-        <!-- 3D container (box mockups) — inserted by JS -->
-        <div id="viewer3d-wrap" style="display:none; width:min(500px, calc(100vw - 560px - 80px)); height:min(500px, calc(100vw - 560px - 80px)); position:relative;"></div>
+        <!-- 3D container (Real 3D for all packaging) -->
+        <div id="viewer3d-wrap" style="width:min(540px, calc(100vw - 560px - 80px)); height:min(540px, calc(100vw - 560px - 80px)); position:relative;"></div>
 
         <div class="canvas-badge">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
           </svg>
           <span id="canvas-mockup-id">Mockup</span>
-          <span id="canvas-hint"> &nbsp;·&nbsp; Drag image here to upload</span>
+          <span id="canvas-hint"> &nbsp;·&nbsp; Drag artwork onto package</span>
         </div>
       </div>
     </div>
@@ -227,12 +302,15 @@
 <div class="toast" id="toast"></div>
 
 <!-- ─── SCRIPTS ───────────────────────────────────────────── -->
-<!-- Three.js r128 (UMD, no modules needed) -->
+<!-- Three.js r128 (UMD) -->
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
-<!-- OrbitControls for r128 (attaches as THREE.OrbitControls) -->
+<!-- OrbitControls -->
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<!-- GLTFExporter for .GLB 3D Download -->
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/exporters/GLTFExporter.js"></script>
 
 <script src="js/data.js"></script>
+<script src="js/models3d.js"></script>
 <script src="js/renderer.js"></script>
 <script src="js/viewer3d.js"></script>
 <script src="js/app.js"></script>

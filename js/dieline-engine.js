@@ -21,25 +21,22 @@ const wrapSVG = (content, TW, TH, bleed) => {
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="${f(vbx)} ${f(vby)} ${f(vbw)} ${f(vbh)}" width="${f(vbw)}mm" height="${f(vbh)}mm">
 <defs>
 <style>
-.fill-panel { fill: rgba(255,255,255,0.2); }
-.fill-side { fill: rgba(255,255,255,0.2); }
-.fill-glue { fill: rgba(255,255,255,0.2); }
-.fill-tuck { fill: rgba(255,255,255,0.2); }
-.fill-dust { fill: rgba(255,255,255,0.2); }
-.fill-special { fill: rgba(255,255,255,0.2); }
-.cut { fill: none; stroke: #CC0000; stroke-width: 0.3; stroke-linecap: round; stroke-linejoin: round; }
-.fold { fill: none; stroke: #0066CC; stroke-width: 0.25; stroke-dasharray: 4 2.5; stroke-linecap: butt; }
-.bleed { fill: none; stroke: #FF8888; stroke-width: 0.3; stroke-dasharray: 3 2; }
-.reg-mark { fill: none; stroke: #FF8888; stroke-width: 0.25; }
-.dim { fill: none; stroke: #AAAAAA; stroke-width: 0.2; marker-end: url(#arr); marker-start: url(#arr-start); }
-.lbl-panel { font: bold 3.5px Inter, Arial, sans-serif; fill: #888888; text-anchor: middle; dominant-baseline: middle; }
-.lbl-small { font: 2.5px Inter, Arial, sans-serif; fill: #AAAAAA; text-anchor: middle; dominant-baseline: middle; }
+.fill-panel { fill: rgba(255,255,255,0.05); }
+.fill-side { fill: rgba(255,255,255,0.05); }
+.fill-glue { fill: rgba(200,200,200,0.12); }
+.fill-tuck { fill: rgba(255,255,255,0.05); }
+.fill-dust { fill: rgba(255,255,255,0.05); }
+.cut { fill: none; stroke: #e11d48; stroke-width: 0.35; stroke-linecap: round; stroke-linejoin: round; }
+.fold { fill: none; stroke: #2563eb; stroke-width: 0.3; stroke-dasharray: 4 2.5; stroke-linecap: butt; }
+.bleed { fill: none; stroke: #f43f5e; stroke-width: 0.25; stroke-dasharray: 3 2; opacity: 0.6; }
+.lbl-panel { font: bold 3.5px Inter, -apple-system, sans-serif; fill: #64748b; text-anchor: middle; dominant-baseline: middle; letter-spacing: 0.5px; }
+.lbl-small { font: 2.5px Inter, -apple-system, sans-serif; fill: #94a3b8; text-anchor: middle; dominant-baseline: middle; }
 </style>
 <marker id="arr" markerWidth="4" markerHeight="4" refX="4" refY="2" orient="auto">
-  <path d="M0,0 L4,2 L0,4 Z" fill="#AAAAAA"/>
+  <path d="M0,0 L4,2 L0,4 Z" fill="#94a3b8"/>
 </marker>
 <marker id="arr-start" markerWidth="4" markerHeight="4" refX="0" refY="2" orient="auto">
-  <path d="M4,0 L0,2 L4,4 Z" fill="#AAAAAA"/>
+  <path d="M4,0 L0,2 L4,4 Z" fill="#94a3b8"/>
 </marker>
 </defs>
 ${content}
@@ -47,10 +44,10 @@ ${content}
 };
 
 // ════════════════════════════════════════════════════════════
-// GENERATORS
+// 1. TUCK END BOX
 // ════════════════════════════════════════════════════════════
 
-const genTuckBox = ({ W, H, D, bleed }) => {
+const genTuckBox = ({ W, H, D, bleed = 3 }) => {
   const gw = Math.max(12, Math.min(22, D * 0.28));
   const tuck_h = Math.max(22, D * 0.65 + 18);
   const dust_w = Math.max(8, (D - 6) / 2);
@@ -65,7 +62,6 @@ const genTuckBox = ({ W, H, D, bleed }) => {
   const d1x=x2+(D-dust_w)/2, d2x=x4+(D-dust_w)/2;
 
   let svg = '';
-  // Panels are now transparent (fill-opacity: 0 or just fill: none) so background images show through
   svg += rect(x0,y1,gw,H,'fill-glue');
   svg += rect(x1,y1,W,H,'fill-panel');
   svg += rect(x2,y1,D,H,'fill-side');
@@ -101,26 +97,28 @@ const genTuckBox = ({ W, H, D, bleed }) => {
   svg += path(`M${d2x},${y2} L${d2x},${y2+dust_h-cr} Q${d2x},${y2+dust_h} ${d2x+cr},${y2+dust_h} L${d2x+dust_w-cr},${y2+dust_h} Q${d2x+dust_w},${y2+dust_h} ${d2x+dust_w},${y2+dust_h-cr} L${d2x+dust_w},${y2}`,'cut');
 
   svg += text(x1+W/2, y1+H/2, 'BACK', 'lbl-panel') + text(x3+W/2, y1+H/2, 'FRONT', 'lbl-panel');
-  svg += text(x2+D/2, y1+H/2, 'SIDE', 'lbl-panel') + text(x4+D/2, y1+H/2, 'SIDE', 'lbl-panel');
+  svg += text(x2+D/2, y1+H/2, 'LEFT', 'lbl-panel') + text(x4+D/2, y1+H/2, 'RIGHT', 'lbl-panel');
   svg += text(x3+W/2, y1-tuck_h/2, 'TOP', 'lbl-small') + text(x3+W/2, y2+tuck_h/2, 'BOTTOM', 'lbl-small');
-  svg += text(d1x+dust_w/2, y1-dust_h/2, 'DUST', 'lbl-small') + text(d2x+dust_w/2, y1-dust_h/2, 'DUST', 'lbl-small');
-  svg += text(d1x+dust_w/2, y2+dust_h/2, 'DUST', 'lbl-small') + text(d2x+dust_w/2, y2+dust_h/2, 'DUST', 'lbl-small');
   svg += text(x0+gw/2, y1+H/2, 'GLUE', 'lbl-small', 'transform="rotate(-90,'+(x0+gw/2)+','+(y1+H/2)+')"');
   svg += rect(-bleed, -bleed, TW+bleed*2, TH+bleed*2, 'bleed');
 
-  // Mappings for 3D slicing (0=Right, 1=Left, 2=Top, 3=Bottom, 4=Front, 5=Back)
+  // Mappings for 3D slicing
   const faces = [
-    { face: 4, x: x3, y: y1, w: W, h: H },     // Front
-    { face: 5, x: x1, y: y1, w: W, h: H },     // Back
-    { face: 1, x: x2, y: y1, w: D, h: H },     // Left
-    { face: 0, x: x4, y: y1, w: D, h: H },     // Right
-    { face: 2, x: x3, y: y1-D, w: W, h: D, rot: 180 }, // Top
-    { face: 3, x: x3, y: y2, w: W, h: D }      // Bottom
+    { face: 'front', x: x3, y: y1, w: W, h: H },
+    { face: 'back',  x: x1, y: y1, w: W, h: H },
+    { face: 'left',  x: x2, y: y1, w: D, h: H },
+    { face: 'right', x: x4, y: y1, w: D, h: H },
+    { face: 'top',   x: x3, y: y1-D, w: W, h: D, rot: 180 },
+    { face: 'bottom',x: x3, y: y2, w: W, h: D }
   ];
   return { svg, TW, TH, faces };
 };
 
-const genMailerBox = ({ W, H, D, bleed }) => {
+// ════════════════════════════════════════════════════════════
+// 2. MAILER BOX
+// ════════════════════════════════════════════════════════════
+
+const genMailerBox = ({ W, H, D, bleed = 3 }) => {
   const gw = Math.max(12, D * 0.2);
   const cover_h = D * 0.5 + 5;
   const lid_h = D * 0.5 + 25;
@@ -140,7 +138,6 @@ const genMailerBox = ({ W, H, D, bleed }) => {
   svg += path(`M${x0},${y1} L${x1},${y1} L${x1},${y1-cover_h} L${x2},${y1-cover_h} L${x2},${y1} L${x3},${y1} L${x3},${y1-lid_h} L${x4},${y1-lid_h} L${x4},${y1} L${x5},${y1}`,'cut');
   svg += path(`M${x0},${y2} L${x1},${y2} L${x1},${y2+bot_h} L${x2},${y2+bot_h} L${x2},${y2} L${x3},${y2} L${x3},${y2+bot_h} L${x4},${y2+bot_h} L${x4},${y2} L${x5},${y2}`,'cut');
   svg += line(x0,y1,x0,y2,'cut') + line(x5,y1,x5,y2,'cut');
-  svg += line(x1+W/2,y2+bot_h/2,x1+W/2,y2+bot_h,'cut');
 
   svg += text(x1+W/2, y1+H/2, 'BACK', 'lbl-panel') + text(x3+W/2, y1+H/2, 'FRONT', 'lbl-panel');
   svg += text(x2+D/2, y1+H/2, 'SIDE', 'lbl-panel') + text(x4+D/2, y1+H/2, 'SIDE', 'lbl-panel');
@@ -149,17 +146,21 @@ const genMailerBox = ({ W, H, D, bleed }) => {
   svg += rect(-bleed, -bleed, TW+bleed*2, TH+bleed*2, 'bleed');
   
   const faces = [
-    { face: 4, x: x3, y: y1, w: W, h: H },     
-    { face: 5, x: x1, y: y1, w: W, h: H },     
-    { face: 1, x: x2, y: y1, w: D, h: H },     
-    { face: 0, x: x4, y: y1, w: D, h: H },     
-    { face: 2, x: x3, y: y1-D, w: W, h: D, rot: 180 }, 
-    { face: 3, x: x3, y: y2, w: W, h: D }      
+    { face: 'front', x: x3, y: y1, w: W, h: H },
+    { face: 'back',  x: x1, y: y1, w: W, h: H },
+    { face: 'left',  x: x2, y: y1, w: D, h: H },
+    { face: 'right', x: x4, y: y1, w: D, h: H },
+    { face: 'top',   x: x3, y: y1-D, w: W, h: D, rot: 180 },
+    { face: 'bottom',x: x3, y: y2, w: W, h: D }
   ];
   return { svg, TW, TH, faces };
 };
 
-const genSleeveBox = ({ W, H, D, bleed }) => {
+// ════════════════════════════════════════════════════════════
+// 3. SLEEVE BOX
+// ════════════════════════════════════════════════════════════
+
+const genSleeveBox = ({ W, H, D, bleed = 3 }) => {
   const gw = Math.max(12, 15);
   const x0=0, x1=gw, x2=x1+W, x3=x2+D, x4=x3+W, x5=x4+D, TW=x5, TH=H;
 
@@ -168,21 +169,25 @@ const genSleeveBox = ({ W, H, D, bleed }) => {
   svg += line(x1,0,x1,H,'fold') + line(x2,0,x2,H,'fold') + line(x3,0,x3,H,'fold') + line(x4,0,x4,H,'fold');
   svg += line(0,0,TW,0,'cut') + line(0,H,TW,H,'cut') + line(0,0,0,H,'cut') + line(TW,0,TW,H,'cut');
 
-  svg += text(x1+W/2, H/2, 'BACK', 'lbl-panel') + text(x3+W/2, H/2, 'FRONT', 'lbl-panel');
-  svg += text(x2+D/2, H/2, 'SIDE', 'lbl-panel') + text(x4+D/2, H/2, 'SIDE', 'lbl-panel');
+  svg += text(x1+W/2, H/2, 'TOP', 'lbl-panel') + text(x3+W/2, H/2, 'BOTTOM', 'lbl-panel');
+  svg += text(x2+D/2, H/2, 'LEFT', 'lbl-panel') + text(x4+D/2, H/2, 'RIGHT', 'lbl-panel');
   svg += text(x0+gw/2, H/2, 'GLUE', 'lbl-small', 'transform="rotate(-90,'+(x0+gw/2)+','+(H/2)+')"');
   svg += rect(-bleed, -bleed, TW+bleed*2, TH+bleed*2, 'bleed');
 
   const faces = [
-    { face: 4, x: x3, y: 0, w: W, h: H },     
-    { face: 5, x: x1, y: 0, w: W, h: H },     
-    { face: 1, x: x2, y: 0, w: D, h: H },     
-    { face: 0, x: x4, y: 0, w: D, h: H },     
+    { face: 'top',    x: x1, y: 0, w: W, h: H },
+    { face: 'bottom', x: x3, y: 0, w: W, h: H },
+    { face: 'left',   x: x2, y: 0, w: D, h: H },
+    { face: 'right',  x: x4, y: 0, w: D, h: H }
   ];
   return { svg, TW, TH, faces };
 };
 
-const genPillowBox = ({ W, H, bleed }) => {
+// ════════════════════════════════════════════════════════════
+// 4. PILLOW BOX
+// ════════════════════════════════════════════════════════════
+
+const genPillowBox = ({ W, H, bleed = 3 }) => {
   const gw = 15;
   const h_bow = W * 0.15;
   const x0=0, x1=gw, x2=x1+W, x3=x2+W, TW=x3;
@@ -204,10 +209,19 @@ const genPillowBox = ({ W, H, bleed }) => {
   svg += text(x0+gw/2, y1+H/2, 'GLUE', 'lbl-small', 'transform="rotate(-90,'+(x0+gw/2)+','+(y1+H/2)+')"');
   svg += rect(-bleed, -bleed, TW+bleed*2, TH+bleed*2, 'bleed');
 
-  return { svg, TW, TH, faces: [] };
+  const faces = [
+    { face: 'front', x: x1, y: y1, w: W, h: H },
+    { face: 'back',  x: x2, y: y1, w: W, h: H }
+  ];
+
+  return { svg, TW, TH, faces };
 };
 
-const genPyramidBox = ({ W, H, bleed }) => {
+// ════════════════════════════════════════════════════════════
+// 5. PYRAMID BOX
+// ════════════════════════════════════════════════════════════
+
+const genPyramidBox = ({ W, H, bleed = 3 }) => {
   const TW = W + H*2;
   const TH = W + H*2;
   const cx = TW/2, cy = TH/2;
@@ -231,12 +245,20 @@ const genPyramidBox = ({ W, H, bleed }) => {
   svg += text(cx, cy, 'BASE', 'lbl-panel');
   svg += rect(-bleed, -bleed, Math.max(TW+gw, TW)+bleed*2, TH+bleed*2, 'bleed');
 
-  return { svg, TW: TW+gw, TH, faces: [] };
+  const faces = [
+    { face: 'front', x: cx-W/2, y: cy-W/2, w: W, h: W }
+  ];
+
+  return { svg, TW: TW+gw, TH, faces };
 };
 
-const genPaperBag = ({ W, H, D, bleed }) => {
+// ════════════════════════════════════════════════════════════
+// 6. PAPER BAG
+// ════════════════════════════════════════════════════════════
+
+const genPaperBag = ({ W, H, D, bleed = 3 }) => {
   const gw = 15;
-  const top_h = 40;
+  const top_h = 35;
   const bot_h = D/2 + 10;
   
   const x0=0, x1=D/2, x2=x1+W, x3=x2+D/2, x4=x3+W, x5=x4+gw, TW=x5;
@@ -252,23 +274,18 @@ const genPaperBag = ({ W, H, D, bleed }) => {
   svg += line(0,0,TW,0,'cut') + line(0,TH,TW,TH,'cut');
   svg += line(0,0,0,TH,'cut') + line(TW,0,TW,TH,'cut');
 
-  svg += path(`M${x1+W/2-W*0.15},${y1/2} A1,1 0 0,0 ${x1+W/2+W*0.15},${y1/2} A1,1 0 0,0 ${x1+W/2-W*0.15},${y1/2}`, 'cut');
-  svg += path(`M${x3+W/2-W*0.15},${y1/2} A1,1 0 0,0 ${x3+W/2+W*0.15},${y1/2} A1,1 0 0,0 ${x3+W/2-W*0.15},${y1/2}`, 'cut');
-
   svg += text(x1+W/2, y1+H/2, 'FRONT', 'lbl-panel') + text(x3+W/2, y1+H/2, 'BACK', 'lbl-panel');
   svg += rect(-bleed, -bleed, TW+bleed*2, TH+bleed*2, 'bleed');
   
   const faces = [
-    { face: 4, x: x1, y: y1, w: W, h: H },     
-    { face: 5, x: x3, y: y1, w: W, h: H },     
-    { face: 1, x: x0, y: y1, w: D/2, h: H }, // Simplified for bag   
-    { face: 0, x: x2, y: y1, w: D/2, h: H },     
+    { face: 'front', x: x1, y: y1, w: W, h: H },
+    { face: 'back',  x: x3, y: y1, w: W, h: H }
   ];
   return { svg, TW, TH, faces };
 };
 
 // ════════════════════════════════════════════════════════════
-// EXPORT
+// EXPORT FACTORY
 // ════════════════════════════════════════════════════════════
 
 const generateDieline = (templateId, params) => {
@@ -285,7 +302,8 @@ const generateDieline = (templateId, params) => {
   return { 
     svgString: wrapSVG(res.svg, res.TW, res.TH, params.bleed || 0), 
     TW: res.TW, 
-    TH: res.TH 
+    TH: res.TH,
+    faces: res.faces || []
   };
 };
 
