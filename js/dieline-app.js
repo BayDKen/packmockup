@@ -442,9 +442,29 @@ const exportGLB = () => {
   }
 };
 
+// ─── THEME & SIDEBAR CONTROLS ─────────────────────────
+const syncThemeIcons = (theme) => {
+  const isDark = theme === 'dark';
+  document.querySelectorAll('.icon-sun').forEach(el => el.style.display = isDark ? 'block' : 'none');
+  document.querySelectorAll('.icon-moon').forEach(el => el.style.display = isDark ? 'none' : 'block');
+};
+
+const initTheme = () => {
+  const current = document.documentElement.getAttribute('data-theme') || 'dark';
+  syncThemeIcons(current);
+  $('btn-theme-toggle')?.addEventListener('click', () => {
+    const cur = document.documentElement.getAttribute('data-theme') || 'dark';
+    const next = cur === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    localStorage.setItem('packmockup-theme', next);
+    syncThemeIcons(next);
+  });
+};
+
 // ─── INIT ──────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
   initDom();
+  initTheme();
   initTemplateGrid();
   selectTemplate('tuck-box'); 
   
@@ -466,6 +486,31 @@ document.addEventListener('DOMContentLoaded', () => {
       link.click();
       showToast('✓ 4K 3D PNG exported successfully');
     }
+  });
+
+  // Collapsible Sidebars
+  const dielineLayout = document.querySelector('.dieline-layout');
+  const btnToggleLeft = $('btn-toggle-dl-left');
+  const btnToggleRight = $('btn-toggle-dl-right');
+
+  btnToggleLeft?.addEventListener('click', () => {
+    dielineLayout?.classList.toggle('left-hidden');
+    const isHidden = dielineLayout?.classList.contains('left-hidden');
+    btnToggleLeft.classList.toggle('active', isHidden);
+    setTimeout(() => {
+      fitToView();
+      state.miniViewer?._onResize();
+    }, 310);
+  });
+
+  btnToggleRight?.addEventListener('click', () => {
+    dielineLayout?.classList.toggle('right-hidden');
+    const isHidden = dielineLayout?.classList.contains('right-hidden');
+    btnToggleRight.classList.toggle('active', isHidden);
+    setTimeout(() => {
+      fitToView();
+      state.miniViewer?._onResize();
+    }, 310);
   });
   
   // Fold Sliders

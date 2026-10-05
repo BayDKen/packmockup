@@ -148,12 +148,25 @@ const initDom = () => {
     exportBtn:        $('export-btn'),
     exportGlbBtn:     $('export-glb-btn'),
 
-    // Canvas
+    // Header & Theme
+    btnThemeToggle:   $('btn-theme-toggle'),
+
+    // Collapsible Layouts
+    galleryLayout:    $('gallery-layout'),
+    btnToggleSidebar: $('btn-toggle-sidebar'),
+    editorLayout:     $('editor-layout'),
+    btnToggleEditor:  $('btn-toggle-editor'),
+
+    // Canvas & HUD
     previewCanvas:    $('preview-canvas'),
     viewer3dWrap:     $('viewer3d-wrap'),
     canvasBadgeId:    $('canvas-mockup-id'),
-    canvasHint:       $('canvas-hint'),
     toast:            $('toast'),
+    hudCamHero:       $('hud-cam-hero'),
+    hudCamFront:      $('hud-cam-front'),
+    hudCamTop:        $('hud-cam-top'),
+    hudCamIso:        $('hud-cam-iso'),
+    hudBtnRotate:     $('hud-btn-rotate'),
   };
 };
 
@@ -465,6 +478,27 @@ const handleImageLoad = (img, url) => {
 const refreshAutoRotateBtn = () => {
   const on = state.viewer3d?.isAutoRotating() ?? false;
   dom.btnAutoRotate?.classList.toggle('active', on);
+  dom.hudBtnRotate?.classList.toggle('active', on);
+};
+
+// ─── THEME HANDLING ─────────────────────────────────────
+const syncThemeIcons = (theme) => {
+  const isDark = theme === 'dark';
+  document.querySelectorAll('.icon-sun').forEach(el => el.style.display = isDark ? 'block' : 'none');
+  document.querySelectorAll('.icon-moon').forEach(el => el.style.display = isDark ? 'none' : 'block');
+};
+
+const initTheme = () => {
+  const current = document.documentElement.getAttribute('data-theme') || 'dark';
+  syncThemeIcons(current);
+};
+
+const toggleTheme = () => {
+  const current = document.documentElement.getAttribute('data-theme') || 'dark';
+  const next = current === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  localStorage.setItem('packmockup-theme', next);
+  syncThemeIcons(next);
 };
 
 // ════════════════════════════════════════════════════════════
@@ -631,6 +665,56 @@ const initEvents = () => {
     img.onload = () => handleImageLoad(img, url);
     img.src = url;
   });
+
+  // Theme Toggle Button
+  dom.btnThemeToggle?.addEventListener('click', toggleTheme);
+
+  // Gallery Sidebar Toggle
+  dom.btnToggleSidebar?.addEventListener('click', () => {
+    dom.galleryLayout?.classList.toggle('sidebar-collapsed');
+    const isCollapsed = dom.galleryLayout?.classList.contains('sidebar-collapsed');
+    dom.btnToggleSidebar?.classList.toggle('active', isCollapsed);
+  });
+
+  // 3D Editor Controls Collapse Toggle
+  dom.btnToggleEditor?.addEventListener('click', () => {
+    dom.editorLayout?.classList.toggle('controls-collapsed');
+    const isCollapsed = dom.editorLayout?.classList.contains('controls-collapsed');
+    dom.btnToggleEditor?.classList.toggle('active', isCollapsed);
+    setTimeout(() => {
+      state.viewer3d?._onResize();
+    }, 310);
+  });
+
+  // Floating HUD Toolbar Controls
+  const setHudActive = (btn) => {
+    document.querySelectorAll('.floating-hud .hud-btn').forEach(b => {
+      if (b !== dom.hudBtnRotate) b.classList.remove('active');
+    });
+    if (btn) btn.classList.add('active');
+  };
+
+  dom.hudCamHero?.addEventListener('click', () => {
+    state.viewer3d?.setCameraPreset('hero');
+    setHudActive(dom.hudCamHero);
+  });
+  dom.hudCamFront?.addEventListener('click', () => {
+    state.viewer3d?.setCameraPreset('front');
+    setHudActive(dom.hudCamFront);
+  });
+  dom.hudCamTop?.addEventListener('click', () => {
+    state.viewer3d?.setCameraPreset('top');
+    setHudActive(dom.hudCamTop);
+  });
+  dom.hudCamIso?.addEventListener('click', () => {
+    state.viewer3d?.setCameraPreset('isometric');
+    setHudActive(dom.hudCamIso);
+  });
+  dom.hudBtnRotate?.addEventListener('click', () => {
+    if (!state.viewer3d) return;
+    state.viewer3d.toggleAutoRotate();
+    refreshAutoRotateBtn();
+  });
 };
 
 // ════════════════════════════════════════════════════════════
@@ -639,6 +723,7 @@ const initEvents = () => {
 
 document.addEventListener('DOMContentLoaded', () => {
   initDom();
+  initTheme();
   initEvents();
   renderSidebar();
   renderGallery();
