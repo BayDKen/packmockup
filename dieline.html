@@ -163,17 +163,24 @@
     
     <div class="dl-section-title" id="design-adjust-title" style="display:none">Design Adjustments</div>
     <div class="dim-inputs" id="design-controls" style="display:none; margin-bottom: 24px;">
+      <!-- Quick Snap to Face Buttons -->
+      <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:10px;">
+        <button type="button" class="dl-action-btn toggle" id="btn-snap-front" style="padding:6px 11px; font-size:11px;" title="Pas ke Muka Depan">📌 Pas ke Front</button>
+        <button type="button" class="dl-action-btn toggle" id="btn-snap-back" style="padding:6px 11px; font-size:11px;" title="Pas ke Muka Belakang">📌 Pas ke Back</button>
+        <button type="button" class="dl-action-btn toggle" id="btn-snap-reset" style="padding:6px 11px; font-size:11px;" title="Reset Posisi Tengah">🔄 Reset Tengah</button>
+      </div>
+
       <div class="dim-input-group">
-        <div class="dim-input-label">Scale (%)</div>
-        <input type="range" id="inp-dsg-scale" min="10" max="200" value="100" style="width:100%">
+        <div class="dim-input-label">Scale: <span id="txt-dsg-scale" style="color:var(--primary); font-weight:700;">100%</span></div>
+        <input type="range" id="inp-dsg-scale" min="10" max="300" value="100" style="width:100%">
       </div>
       <div class="dim-input-group">
-        <div class="dim-input-label">Offset X</div>
-        <input type="range" id="inp-dsg-x" min="-50" max="50" value="0" style="width:100%">
+        <div class="dim-input-label">Offset X: <span id="txt-dsg-x" style="color:var(--text-primary); font-weight:600;">0%</span></div>
+        <input type="range" id="inp-dsg-x" min="-100" max="100" value="0" style="width:100%">
       </div>
       <div class="dim-input-group">
-        <div class="dim-input-label">Offset Y</div>
-        <input type="range" id="inp-dsg-y" min="-50" max="50" value="0" style="width:100%">
+        <div class="dim-input-label">Offset Y: <span id="txt-dsg-y" style="color:var(--text-primary); font-weight:600;">0%</span></div>
+        <input type="range" id="inp-dsg-y" min="-100" max="100" value="0" style="width:100%">
       </div>
     </div>
     

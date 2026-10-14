@@ -174,6 +174,15 @@ const fitToView = () => {
 };
 
 // ─── DESIGN OVERLAY ────────────────────────────────────
+const updateDesignTextVals = () => {
+  const txtScale = $('txt-dsg-scale');
+  const txtX = $('txt-dsg-x');
+  const txtY = $('txt-dsg-y');
+  if (txtScale) txtScale.textContent = Math.round(state.dScale * 100) + '%';
+  if (txtX) txtX.textContent = Math.round(state.dx) + '%';
+  if (txtY) txtY.textContent = Math.round(state.dy) + '%';
+};
+
 const resetDesign = () => {
   state.designImg = null;
   dom.designLayer.style.display = 'none';
@@ -182,11 +191,65 @@ const resetDesign = () => {
   dom.designControls.style.display = 'none';
   state.dScale = 1.0; state.dx = 0; state.dy = 0;
   dom.slScale.value = 100; dom.slX.value = 0; dom.slY.value = 0;
+  updateDesignTextVals();
 };
 
 const applyDesignTransform = () => {
   dom.designLayer.style.transform = `translate(${state.dx}%, ${state.dy}%) scale(${state.dScale})`;
   requestTextureUpdate();
+};
+
+const snapToFace = (targetFace = 'front') => {
+  if (!state.designImg || !state.svgData || !state.svgData.faces) return;
+  const faceData = state.svgData.faces.find(f => f.face === targetFace);
+  if (!faceData) return;
+
+  const b = state.params.bleed || 3;
+  const pad = 10;
+  const CW = state.svgData.TW + (b + pad) * 2;
+  const CH = state.svgData.TH + (b + pad) * 2;
+
+  const cx = CW / 2;
+  const cy = CH / 2;
+  const fx = faceData.x + b + pad + faceData.w / 2;
+  const fy = faceData.y + b + pad + faceData.h / 2;
+
+  state.dx = Math.round(((fx - cx) / CW) * 100);
+  state.dy = Math.round(((fy - cy) / CH) * 100);
+
+  const iAspect = state.designImg.width / state.designImg.height;
+  const cAspect = CW / CH;
+  let drawW, drawH;
+  if (iAspect > cAspect) {
+    drawW = CW;
+    drawH = CW / iAspect;
+  } else {
+    drawH = CH;
+    drawW = CH * iAspect;
+  }
+
+  const scale = Math.min(faceData.w / drawW, faceData.h / drawH);
+  state.dScale = Math.max(0.1, Math.min(3.0, Math.round(scale * 100) / 100));
+
+  dom.slScale.value = Math.round(state.dScale * 100);
+  dom.slX.value = state.dx;
+  dom.slY.value = state.dy;
+  updateDesignTextVals();
+
+  applyDesignTransform();
+  showToast(`✓ Desain dipaskan ke sisi ${targetFace.toUpperCase()}!`);
+};
+
+const resetSnap = () => {
+  state.dScale = 1.0;
+  state.dx = 0;
+  state.dy = 0;
+  dom.slScale.value = 100;
+  dom.slX.value = 0;
+  dom.slY.value = 0;
+  updateDesignTextVals();
+  applyDesignTransform();
+  showToast('✓ Posisi desain direset ke tengah');
 };
 
 const handleDesignUpload = (e) => {
@@ -200,6 +263,7 @@ const handleDesignUpload = (e) => {
     dom.designLayer.style.display = 'block';
     dom.designAdjustTitle.style.display = 'flex';
     dom.designControls.style.display = 'flex';
+    updateDesignTextVals();
     applyDesignTransform();
   };
   img.src = url;
@@ -239,6 +303,7 @@ const doDrag = (e) => {
   
   dom.slX.value = state.dx;
   dom.slY.value = state.dy;
+  updateDesignTextVals();
   
   applyDesignTransform();
   
@@ -557,9 +622,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
   dom.inpUpload.addEventListener('change', handleDesignUpload);
   
-  dom.slScale.addEventListener('input', (e) => { state.dScale = e.target.value / 100; applyDesignTransform(); });
-  dom.slX.addEventListener('input', (e) => { state.dx = parseFloat(e.target.value); applyDesignTransform(); });
-  dom.slY.addEventListener('input', (e) => { state.dy = parseFloat(e.target.value); applyDesignTransform(); });
+  dom.slScale.addEventListener('input', (e) => { 
+    state.dScale = e.target.value / 100; 
+    updateDesignTextVals();
+    applyDesignTransform(); 
+  });
+  dom.slX.addEventListener('input', (e) => { 
+    state.dx = parseFloat(e.target.value); 
+    updateDesignTextVals();
+    applyDesignTransform(); 
+  });
+  dom.slY.addEventListener('input', (e) => { 
+    state.dy = parseFloat(e.target.value); 
+    updateDesignTextVals();
+    applyDesignTransform(); 
+  });
+
+  // Snap to face buttons
+  $('btn-snap-front')?.addEventListener('click', () => snapToFace('front'));
+  $('btn-snap-back')?.addEventListener('click', () => snapToFace('back'));
+  $('btn-snap-reset')?.addEventListener('click', resetSnap);
   
   dom.btn3dPreview.addEventListener('click', open3DPreview);
   dom.btnCloseModal.addEventListener('click', () => { dom.modal3d.style.display = 'none'; });
